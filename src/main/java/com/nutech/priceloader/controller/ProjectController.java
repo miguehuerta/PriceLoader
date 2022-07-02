@@ -60,7 +60,7 @@ public class ProjectController {
 				int projectsRunningQuantity = projectsRuning.size();
 				Long idActiveProject = activeProjects.get(0).getId();
 				if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
-						&& idActiveProject.equals(myProject.getId()) && projectsRunningQuantity == 1) {
+						&& idActiveProject.equals(myProject.getId())) {
 					myProject.setProcessing(true);
 					service.update(myProject);
 					List<PriceListProject> priceListProjectNoRollback = priceListProjectRepository.findByProjectAndIsRollback(myProject, false);
@@ -97,11 +97,9 @@ public class ProjectController {
 			try {
 				Project myProject = service.getProject(project.getId()).get();
 				List<Project> activeProjects = service.getActiveProject().get();
-				List<Project> projectsRuning = service.getProjectsRunning().get();
-				int projectsRunningQuantity = projectsRuning.size();
 				Long idActiveProject = activeProjects.get(0).getId();
 				if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
-						&& idActiveProject.equals(myProject.getId()) && projectsRunningQuantity == 1) {
+						&& idActiveProject.equals(myProject.getId())) {
 					myProject.setStep(4);
 					service.update(myProject);
 				}

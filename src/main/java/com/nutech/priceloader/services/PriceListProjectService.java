@@ -32,6 +32,8 @@ import com.nutech.atg.repository.WlmPriceRepository;
 import com.nutech.atg.services.CatalogService;
 import com.nutech.atg.services.DcsPriceService;
 import com.nutech.atg.services.DynamoService;
+import com.nutech.atg.services.WlmCampaignItemListService;
+import com.nutech.atg.services.WlmCampaignItemService;
 import com.nutech.atg.services.WlmPriceService;
 import com.nutech.atg.services.WlmProductService;
 import com.nutech.priceloader.entities.ExcelFile;
@@ -83,7 +85,7 @@ public class PriceListProjectService {
 
 	@Autowired
 	WlmCampaignItemRepository wlmCampaignItemRepository;
-	
+
 	@Autowired
 	WlmCampaignItemListRepository wlmCampaignItemListRepository;
 
@@ -94,7 +96,15 @@ public class PriceListProjectService {
 	DynamoService dynService;
 
 	@Autowired
+	WlmCampaignItemService wlmCampaignItemService;
+
+	@Autowired
+	WlmCampaignItemListService wlmCampaignItemListService;
+
+	@Autowired
 	Ssh ssh;
+
+	private String actions = "";
 
 	public List<PriceListProject> setPriceListFromProject(Project myProject, String name) {
 		// TODO Auto-generated method stub
@@ -124,7 +134,8 @@ public class PriceListProjectService {
 
 	@SuppressWarnings("unused")
 	public void doValidations(List<PriceListProject> myPriceListsProject, Project project, boolean isRollback,
-			Authentication auth) throws CloneNotSupportedException, IOException {
+			Authentication auth)
+			throws CloneNotSupportedException, IOException, InterruptedException, ExecutionException {
 
 		System.out.println("Comenzando a recopilar informacion de bd");
 
@@ -135,7 +146,7 @@ public class PriceListProjectService {
 			catalogService.changeCatPreview();
 		}
 		if (environment.equals("prod")) {
-			dynService.changeToCata();
+			dynService.changeToCatb();
 		}
 
 		Set<String> setSkusPriceList = myPriceListsProject.stream().map(PriceListProject::getProductNbr)
@@ -153,7 +164,7 @@ public class PriceListProjectService {
 				.map(String::valueOf).collect(Collectors.toSet());
 
 		List<WlmPrice> wlmPrices = this.getWlmPrices(setPricesIds);
-		
+
 		List<WlmCampaignItem> wlmCampaignItems = this.getWlmCampaignItem(setSkusPriceList);
 
 		List<WlmCampaignItemList> wlmCampaignItemLists = this.getWlmCampaignItemLists(setSkusPriceList);
@@ -172,7 +183,7 @@ public class PriceListProjectService {
 		for (WlmPrice wlmPrice : wlmPrices) {
 			wlmPriceMap.put(wlmPrice.getPriceId(), wlmPrice);
 		}
-		
+
 		Map<String, WlmCampaignItem> wlmCampaignItemMap = new HashMap<>();
 		for (WlmCampaignItem wlmCampaignItem : wlmCampaignItems) {
 			wlmCampaignItemMap.put(wlmCampaignItem.getSkuId() + ";" + wlmCampaignItem.getStoreId(), wlmCampaignItem);
@@ -209,7 +220,18 @@ public class PriceListProjectService {
 
 		List<DcsPrice> partialDcsPriceDeletes = new ArrayList<>();
 		List<WlmPrice> partialWlmPriceDeletes = new ArrayList<>();
-		
+
+		List<WlmCampaignItem> partialWlmCampaignItemInserts = new ArrayList<>();
+
+		List<WlmCampaignItemList> partialWlmCampaignItemListDeletes = new ArrayList<>();
+		List<WlmCampaignItemList> partialWlmCampaignItemListInserts = new ArrayList<>();
+
+		/*
+		 * List<WlmCampaignItemList> partialWlmCampaignItemList2Deletes = new
+		 * ArrayList<>(); List<WlmCampaignItemList> partialWlmCampaignItemList2Inserts =
+		 * new ArrayList<>(); List<WlmCampaignItemList>
+		 * partialWlmCampaignItemList2Updates = new ArrayList<>();
+		 */
 		List<String> partialDynamoCampaign = new ArrayList<String>();
 
 		// Inicializando cliente sftp
@@ -246,27 +268,10 @@ public class PriceListProjectService {
 					? wlmPriceMap.get(currentDcsPriceBasePriceSales.getPriceId())
 					: null;
 
-			WlmCampaignItem wlmCampaignItem = wlmCampaignItemMap.get(skuId+";"+storeId);
-			
-			WlmCampaignItemList wlmCampaignList0 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";0");
-			WlmCampaignItemList wlmCampaignList1 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";1");
+			WlmCampaignItem currentwlmCampaignItem = wlmCampaignItemMap.get(skuId + ";" + storeId);
 
-			boolean dcsPackPriceUpdated = false;
-			boolean dcsBasePriceReferenceUpdated = false;
-			boolean dcsPriceSalesUpdated = false;
-
-			boolean wlmPackPriceUpdated = false;
-			boolean wlmBasePriceReferenceUpdated = false;
-			boolean wlmPriceSalesUpdated = false;
-			
-			boolean dcsPackPriceDeleted = false;
-			boolean dcsBasePriceReferenceDeleted = false;
-			boolean dcsPriceSalesDeleted = false;
-
-			boolean wlmPackPriceDeleted = false;
-			boolean wlmBasePriceReferenceDeleted = false;
-			boolean wlmPriceSalesDeleted = false;
-						
+			WlmCampaignItemList currentwlmCampaignItemList1 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";0");
+			WlmCampaignItemList currentwlmCampaignItemList2 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";1");
 
 			String actions = "";
 
@@ -275,7 +280,8 @@ public class PriceListProjectService {
 			if (!isRollback) {
 				rollbackPriceListProject = getRollbackData(rollbackPriceListProject, currentDcsPricePack,
 						currentDcsPriceBasePriceReference, currentDcsPriceBasePriceSales, currentWlmPricePack,
-						currentWlmBasePriceReferece, currentWlmBasePriceSales, wlmCampaignList0, wlmCampaignList1);
+						currentWlmBasePriceReferece, currentWlmBasePriceSales, currentwlmCampaignItemList1,
+						currentwlmCampaignItemList2);
 				rollbackPriceListProjectList.add(rollbackPriceListProject);
 			}
 
@@ -287,42 +293,25 @@ public class PriceListProjectService {
 				String pricePerUm = this.calculateUom(uom, basePriceSales);
 
 				item.setPricePerUm(pricePerUm);
-
+				boolean dcsPackPriceUpdated = false, wlmPackSizeUpdated = false, wlmPackPricePerUmUpdated = false,
+						dcsPackPriceDeleted = false, wlmPackPriceDeleted = false;
 				if (basePackPrice != null && basePackPrice != 0) {
 					totalPack++;
-					if (currentDcsPricePack != null) {
+					if (currentDcsPricePack != null && currentWlmPricePack!=null) {
 						updatePack += 1;
 						if (!currentDcsPricePack.getListPrice().equals(basePackPrice)) {
-							actions += actions.isEmpty() ? "" : " | ";
-							actions += "update packPrice: " + currentDcsPricePack.getListPrice() + " a "
-									+ basePackPrice;
-							currentDcsPricePack.setListPrice(basePackPrice);
 							dcsPackPriceUpdated = true;
 						}
 
 						if (currentWlmPricePack != null) {
-							boolean changePackSize = false;
-							boolean changeUm = false;
 							if (!currentWlmPricePack.getPackSize().equals(basePackSize)) {
-								actions += actions.isEmpty() ? "" : " | ";
-								actions += "update packSize: " + currentWlmPricePack.getPackSize() + " a "
-										+ basePackSize;
-
-								currentWlmPricePack.setPackSize(basePackSize);
-								changePackSize = true;
+								wlmPackSizeUpdated = true;
 							}
 
 							if (!currentWlmPricePack.getPricePerUm().isEmpty()
 									&& !currentWlmPricePack.getPricePerUm().equals("0")
 									&& !currentWlmPricePack.getPricePerUm().equals(pricePerUm)) {
-								actions += actions.isEmpty() ? "" : " | ";
-								actions += "update PricePerUm: " + currentWlmPricePack.getPricePerUm() + " a "
-										+ pricePerUm;
-								currentWlmPricePack.setPricePerUm(pricePerUm);
-								changeUm = true;
-							}
-							if (changePackSize == true || changeUm == true) {
-								wlmPackPriceUpdated = true;
+								wlmPackPricePerUmUpdated = true;
 							}
 						}
 					} else {
@@ -331,28 +320,22 @@ public class PriceListProjectService {
 					}
 				} else {
 					if (currentDcsPricePack != null) {
-						// borrar precio dyn admin
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajando precio pack en dcs";
-						dcsPackPriceDeleted=true;
+						// borrar precio
+						dcsPackPriceDeleted = true;
 					}
 					if (currentWlmPricePack != null) {
-						// borrar precio dyn admin
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajando precio pack en wlm";
-						wlmPackPriceDeleted=true;
+						// borrar precio
+						wlmPackPriceDeleted = true;
 					}
 				}
 
+				boolean dcsBasePriceReferenceUpdated = false, wlmBasePriceReferencePerUmUpdated = false,
+						dcsBasePriceReferenceDeleted = false, wlmBasePriceReferenceDeleted = false;
 				if (basePriceReference != null && basePriceReference != 0) {
 					totalBase++;
-					if (currentDcsPriceBasePriceReference != null) {
+					if (currentDcsPriceBasePriceReference != null && currentWlmBasePriceReferece!=null) {
 						updateBase += 1;
 						if (!currentDcsPriceBasePriceReference.getListPrice().equals(basePriceReference)) {
-							actions += actions.isEmpty() ? "" : " | ";
-							actions += "update basePriceReference: " + currentDcsPriceBasePriceReference.getListPrice()
-									+ " a " + basePriceReference;
-							currentDcsPriceBasePriceReference.setListPrice(basePriceReference);
 							dcsBasePriceReferenceUpdated = true;
 						}
 
@@ -360,12 +343,7 @@ public class PriceListProjectService {
 							if (!currentWlmBasePriceReferece.getPricePerUm().isEmpty()
 									&& !currentWlmBasePriceReferece.getPricePerUm().equals("0")
 									&& !currentWlmBasePriceReferece.getPricePerUm().equals(pricePerUm)) {
-
-								actions += actions.isEmpty() ? "" : " | ";
-								actions += "update PricePerUm: " + currentWlmBasePriceReferece.getPricePerUm() + " a "
-										+ pricePerUm;
-								currentWlmBasePriceReferece.setPricePerUm(pricePerUm);
-								wlmBasePriceReferenceUpdated = true;
+								wlmBasePriceReferencePerUmUpdated = true;
 							}
 						}
 					} else {
@@ -375,39 +353,28 @@ public class PriceListProjectService {
 				} else {
 
 					if (currentDcsPriceBasePriceReference != null) {
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajando precio priceReference e dcs";
-						dcsBasePriceReferenceDeleted=true;
+						dcsBasePriceReferenceDeleted = true;
 					}
 					if (currentWlmBasePriceReferece != null) {
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajando precio priceReference e wlm";
-						wlmBasePriceReferenceDeleted=true;
+						wlmBasePriceReferenceDeleted = true;
 					}
 				}
 
+				boolean dcsPriceSalesUpdated = false, wlmPriceSalesPerUmUpdated = false, dcsPriceSalesDeleted = false,
+						wlmPriceSalesDeleted = false;
+
 				if (basePriceSales != null && basePriceSales != 0) {
 					totalSales++;
-					if (currentDcsPriceBasePriceSales != null) {
+					if (currentDcsPriceBasePriceSales != null && currentWlmBasePriceSales!=null) {
 						updateSales += 1;
 						if (!currentDcsPriceBasePriceSales.getListPrice().equals(basePriceSales)) {
-							actions += actions.isEmpty() ? "" : " | ";
-							actions += "update basePriceSales: " + currentDcsPriceBasePriceSales.getListPrice() + " a "
-									+ basePriceSales;
-							// Actualizar priceSales e bd
-							currentDcsPriceBasePriceSales.setListPrice(basePriceSales);
 							dcsPriceSalesUpdated = true;
-
 						}
 						if (currentWlmBasePriceSales != null) {
 							if (!currentWlmBasePriceSales.getPricePerUm().isEmpty()
 									&& !currentWlmBasePriceSales.getPricePerUm().equals("0")
 									&& !currentWlmBasePriceSales.getPricePerUm().equals(pricePerUm)) {
-								actions += actions.isEmpty() ? "" : " | ";
-								actions += "update PricePerUm: " + currentWlmBasePriceSales.getPricePerUm() + " a "
-										+ pricePerUm;
-								currentWlmBasePriceSales.setPricePerUm(pricePerUm);
-								wlmPriceSalesUpdated = true;
+								wlmPriceSalesPerUmUpdated = true;
 							}
 						}
 					} else {
@@ -416,95 +383,185 @@ public class PriceListProjectService {
 					}
 				} else {
 					if (currentDcsPriceBasePriceSales != null) {
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajando precio priceSales en dcs";
-						dcsPriceSalesDeleted=true;
-						//partialDcsPriceDeletes.add(currentDcsPriceBasePriceSales);
+						dcsPriceSalesDeleted = true;
 					}
 					if (currentWlmBasePriceSales != null) {
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajando precio priceSales en wlm";
-						wlmPriceSalesDeleted=true;
-						//partialWlmPriceDeletes.add(currentWlmBasePriceSales);
+						wlmPriceSalesDeleted = true;
 					}
 				}
 
-				if (insert == true) {
-					// nuevo registro para poder agregarlo a csv de priceList
-					bcc++;
-					bccItems.add(item);
+				boolean wlmCampaignItemInserted = false, wlmCampaignItemList1Inserted = false,
+						wlmCampaignItemList1Updated = false, wlmCampaignItemList1Deleted = false,
+						wlmCampaignItemList2Inserted = false, wlmCampaignItemList2Updated = false,
+						wlmCampaignItemList2Deleted = false;
+
+				if (icon1 != null) {
+					if (currentwlmCampaignItemList1 != null) {
+						// update
+						if (!icon1.toString().equals(currentwlmCampaignItemList1.getCampaigns().toString())) {
+							// Es distinto, actualizar
+							wlmCampaignItemList1Updated = true;
+						}
+					} else {
+						// insert currentwlmCampaignItemList1 es nulo
+						wlmCampaignItemList1Inserted = true;
+					}
 				} else {
+					if (currentwlmCampaignItemList1 != null) {
+						// delete
+						wlmCampaignItemList1Deleted = true;
+					}
+				}
+				if (icon2 != null) {
+					if (currentwlmCampaignItemList2 != null) {
+						// update
+						if (!icon2.toString().equals(currentwlmCampaignItemList2.getCampaigns().toString())) {
+							// Es distinto, actualizar
+							wlmCampaignItemList2Updated = true;
+						}
+					} else {
+						// insert
+						wlmCampaignItemList2Inserted = true;
+					}
+				} else {
+					if (currentwlmCampaignItemList2 != null) {
+						// delete
+						wlmCampaignItemList2Deleted = true;
+					}
+				}
+
+				if (currentwlmCampaignItem == null
+						&& (wlmCampaignItemList1Inserted == true || wlmCampaignItemList2Inserted == true)) {
+					WlmCampaignItem wlmCampaignItem = new WlmCampaignItem(skuId.toString(), storeId.toString());
+					currentwlmCampaignItem = wlmCampaignItem;
+					wlmCampaignItemInserted = true;
+				}
+
+				if (insert == false) {
 					// Se evalua si se actualizó y se agrega
-					if (dcsPackPriceUpdated == true) {
+					if (dcsPackPriceUpdated == true && !currentDcsPricePack.getPriceId().isEmpty()) {
+						this.addAction(
+								"update packPrice: " + currentDcsPricePack.getListPrice() + " a " + basePackPrice);
+						currentDcsPricePack.setListPrice(basePackPrice);
 						partialDcsPriceUpdates.add(currentDcsPricePack);
 					}
-					if (dcsBasePriceReferenceUpdated == true) {
-						partialDcsPriceUpdates.add(currentDcsPriceBasePriceReference);
-					}
-					if (dcsPriceSalesUpdated == true) {
-						partialDcsPriceUpdates.add(currentDcsPriceBasePriceSales);
-					}
-
-					if (wlmPackPriceUpdated == true) {
+					if (wlmPackSizeUpdated == true) {
+						this.addAction("update PricePack: " + currentWlmPricePack.getPackSize() + " a " + basePackSize);
+						currentWlmPricePack.setPackSize(basePackSize);
 						partialWlmPriceUpdates.add(currentWlmPricePack);
 					}
-					if (wlmBasePriceReferenceUpdated == true) {
-						partialWlmPriceUpdates.add(currentWlmBasePriceReferece);
+					if (wlmPackPricePerUmUpdated == true) {
+						this.addAction(
+								"update PricePerUm: " + currentWlmPricePack.getPricePerUm() + " a " + pricePerUm);
+						currentWlmPricePack.setPricePerUm(pricePerUm);
+						partialWlmPriceUpdates.add(currentWlmPricePack);
 					}
-					if (wlmPriceSalesUpdated == true) {
-						partialWlmPriceUpdates.add(currentWlmBasePriceSales);
-					}
-					
-					if(dcsPackPriceDeleted==true) {
+					if (dcsPackPriceDeleted == true) {
+						this.addAction("bajando pricePack en dcs");
 						partialDcsPriceDeletes.add(currentDcsPricePack);
 					}
-					if(wlmPackPriceDeleted==true) {
+					if (wlmPackPriceDeleted == true) {
+						this.addAction("bajando pricePack en wlm");
 						partialWlmPriceDeletes.add(currentWlmPricePack);
 					}
 
-					if(dcsBasePriceReferenceDeleted==true) {
+					if (dcsBasePriceReferenceUpdated == true && currentDcsPriceBasePriceReference.getPriceId().isEmpty()) {
+						this.addAction("update basePriceReference: " + currentDcsPriceBasePriceReference.getListPrice()
+								+ " a " + basePriceReference);
+						currentDcsPriceBasePriceReference.setListPrice(basePriceReference);
+						partialDcsPriceUpdates.add(currentDcsPriceBasePriceReference);
+					}
+					if (wlmBasePriceReferencePerUmUpdated == true) {
+						this.addAction("update PricePerUm: " + currentWlmBasePriceReferece.getPricePerUm() + " a "
+								+ pricePerUm);
+						currentWlmBasePriceReferece.setPricePerUm(pricePerUm);
+						partialWlmPriceUpdates.add(currentWlmBasePriceReferece);
+					}
+					if (dcsBasePriceReferenceDeleted == true) {
+						this.addAction("bajando priceReference en dcs");
 						partialDcsPriceDeletes.add(currentDcsPriceBasePriceReference);
 					}
-					if(wlmBasePriceReferenceDeleted==true) {
+					if (wlmBasePriceReferenceDeleted == true) {
+						this.addAction("bajando priceReference en wlm");
 						partialWlmPriceDeletes.add(currentWlmBasePriceReferece);
 					}
 
-					if(dcsPriceSalesDeleted==true) {
+					if (dcsPriceSalesUpdated == true && !currentDcsPriceBasePriceSales.getPriceId().isEmpty()) {
+						this.addAction("update basePriceSales: " + currentDcsPriceBasePriceSales.getListPrice() + " a "
+								+ basePriceSales);
+						currentDcsPriceBasePriceSales.setListPrice(basePriceSales);
+						partialDcsPriceUpdates.add(currentDcsPriceBasePriceSales);
+					}
+					if (wlmPriceSalesPerUmUpdated == true) {
+						this.addAction(actions += "update PricePerUm: " + currentWlmBasePriceSales.getPricePerUm()
+								+ " a " + pricePerUm);
+						currentWlmBasePriceSales.setPricePerUm(pricePerUm);
+						partialWlmPriceUpdates.add(currentWlmBasePriceSales);
+					}
+					if (dcsPriceSalesDeleted == true) {
+						this.addAction("bajando precio priceSales en dcs");
 						partialDcsPriceDeletes.add(currentDcsPriceBasePriceSales);
 					}
-					if(wlmPriceSalesDeleted==true) {
+					if (wlmPriceSalesDeleted == true) {
+						this.addAction("bajando precio priceSales en wlm");
 						partialWlmPriceDeletes.add(currentWlmBasePriceSales);
 					}
-					
-					String icons = getIcons(icon1, icon2, wlmCampaignList0, wlmCampaignList1);
 
-					if (!icons.isEmpty()) {
-						// additem campaign
-
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "update en campaigns";
-						String xmlDyn = dynService.xmlAddCampaign(storeId.toString(), skuId.toString(), icons);
-						partialDynamoCampaign.add(xmlDyn);
+					if (wlmCampaignItemList1Updated == true) {
+						this.addAction("update icon1: " + currentwlmCampaignItemList1.getCampaigns() + " a " + icon1);
+						partialWlmCampaignItemListDeletes
+								.add((WlmCampaignItemList) currentwlmCampaignItemList1.clone());
+						currentwlmCampaignItemList1.setCampaigns(icon1);
+						partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList1);
+					}
+					if (wlmCampaignItemList1Inserted == true) {
+						this.addAction("insertando icon1");
+						WlmCampaignItemList wlmCampaignItemList1 = new WlmCampaignItemList(skuId.toString(),
+								storeId.toString(), 0, icon1);
+						currentwlmCampaignItemList1 = wlmCampaignItemList1;
+						partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList1);
+					}
+					if (wlmCampaignItemList1Deleted == true) {
+						this.addAction("Bajando icon1");
+						partialWlmCampaignItemListDeletes.add(currentwlmCampaignItemList1);
 					}
 
-					if (icons.isEmpty() && wlmCampaignList0 != null && wlmCampaignList1 != null) {
-						actions += actions.isEmpty() ? "" : " | ";
-						actions += "bajado campaigns";
-						String xmlDyn = dynService.xmlDeleteCampaign(skuId.toString() + ";" + storeId.toString());
-						partialDynamoCampaign.add(xmlDyn);
+					if (wlmCampaignItemList2Updated == true) {
+						this.addAction("update icon2: " + currentwlmCampaignItemList2.getCampaigns() + " a " + icon2);
+						partialWlmCampaignItemListDeletes
+								.add((WlmCampaignItemList) currentwlmCampaignItemList2.clone());
+						currentwlmCampaignItemList2.setCampaigns(icon2);
+						partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList2);
 					}
+					if (wlmCampaignItemList2Inserted == true) {
+						this.addAction("insertando icon2");
+						WlmCampaignItemList wlmCampaignItemList2 = new WlmCampaignItemList(skuId.toString(),
+								storeId.toString(), 1, icon2);
+						currentwlmCampaignItemList2 = wlmCampaignItemList2;
+
+						partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList2);
+					}
+
+					if (wlmCampaignItemList2Deleted == true) {
+						this.addAction("Bajando icon2");
+						partialWlmCampaignItemListDeletes.add(currentwlmCampaignItemList2);
+					}
+
+					if (wlmCampaignItemInserted == true) {
+						partialWlmCampaignItemInserts.add(currentwlmCampaignItem);
+					}
+				} else {
+					// nuevo registro para poder agregarlo a csv de priceList
+					bcc++;
+					bccItems.add(item);
 				}
-
 				if (bccItems.size() > 5999) {
 					this.generateBccFiles(bccItems, sequence, auth);
 					sequence++;
 					bccItems.clear();
 				}
-
-
-
-				item.setActionPeformed(actions);
-
+				item.setActionPeformed(this.actions);
+				this.actions = "";
 			} else {
 				// System.out.println("No existe el sku en atg");
 				item.setError(true);
@@ -516,19 +573,45 @@ public class PriceListProjectService {
 
 		}
 
-		/*
-		 * //Descomentar para aplicar changes base datos try {
-		 * this.saveAllUpdates(partialWlmPriceUpdates, partialDcsPriceUpdates); } catch
-		 * (InterruptedException e) { // TODO Auto-generated catch block
-		 * e.printStackTrace(); } catch (ExecutionException e) { // TODO Auto-generated
-		 * catch block e.printStackTrace(); }
-		 * 
-		 * this.applyDynamoChangesCampaigns(partialDynamoCampaign);
-		*/
+		// Esto es para actualizar los precios
+		this.saveAllPriceUpdates(partialWlmPriceUpdates, partialDcsPriceUpdates);
+
+		Thread.sleep(10000);
 		
-		//Esto es para borrar los precios
-		//this.deletePrices(partialWlmPriceDeletes, partialDcsPriceDeletes);
+		// Esto es para borrar los precios
+		this.deletePrices(this.getUniqWlmPrice(partialWlmPriceDeletes), this.getUniqDcsPrice(partialDcsPriceDeletes));
+
+		Thread.sleep(10000);
 		
+		// Borrar CampaignItemnList
+		List<WlmCampaignItemList> uniqDeleteList = this.getUniqCampaignsList(partialWlmCampaignItemListDeletes);
+		System.out.println(
+				"size before " + partialWlmCampaignItemListDeletes.size() + ", size after " + uniqDeleteList.size());
+		this.deleteCampaignItemsList(partialWlmCampaignItemListDeletes);
+
+		Thread.sleep(10000);
+
+		// Guardar nuevos CampaingItem
+
+		try {
+			this.saveCampaignItems(partialWlmCampaignItemInserts);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+		Thread.sleep(10000);
+		
+		// Guardar nuevos CampaignItemList primero sacando únicos y validando no existen
+		try {
+			List<WlmCampaignItemList> uniqimsertsList = this.getUniqCampaignsList(partialWlmCampaignItemListInserts);
+			this.saveCampaignItemsList(uniqimsertsList);
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			wlmCampaignItemListService.saveCampaignListItemsOneByOne(partialWlmCampaignItemListInserts, environment);
+		}
+
 		project.setProcessedPercentage(100);
 
 		String report = "Se encontraron " + updatePack + " de " + totalPack + " requeridos\n" + "Se encontraron "
@@ -537,131 +620,55 @@ public class PriceListProjectService {
 
 		System.out.println(report);
 
-		for (PriceListProject rollbackItem : rollbackPriceListProjectList) {
-			rollbackItem.setId(null);
-		}
 		// this.generateBccFiles(bccItems, auth);
 		if (bccItems.size() > 0) {
 			this.generateBccFiles(bccItems, sequence, auth);
 			bccItems.clear();
 		}
 
+		for (PriceListProject rollbackItem : rollbackPriceListProjectList) {
+			rollbackItem.setId(null);
+		}
 		if (isRollback == false) {
 			priceListProjectRepository.saveAll(myPriceListsProject);
 			priceListProjectRepository.saveAll(rollbackPriceListProjectList);
 		}
 	}
 
-	private void applyDynamoChangesPriceList(List<DcsPrice> partialDynamoPrice) {
-		// TODO Auto-generated method stub
-
-		List<DcsPrice> existingPreview = new ArrayList<>();
-		List<DcsPrice> existingCata = new ArrayList<>();
-		List<DcsPrice> existingCatb = new ArrayList<>();
-
-		if (environment.equals("preview")) {
-			existingPreview = dcsPriceService.findByPriceIdPreview(partialDynamoPrice);
-
-			List<String> updatesPreview = new ArrayList<String>();
-
-			for (DcsPrice price : existingPreview) {
-				updatesPreview.add(dynService.xmlDeletePrice(price.getPriceId()));
-			}
-			applyDynUpdatesPrices(updatesPreview, "preview");
+	private List<DcsPrice> getUniqDcsPrice(List<DcsPrice> prices) {
+		Set<DcsPrice> set = new HashSet<DcsPrice>();
+		for (DcsPrice price : prices) {
+			set.add(price);
 		}
-
-		if (environment.equals("prod")) {
-
-			existingCata = dcsPriceService.findByPriceIdCata(partialDynamoPrice);
-			existingCatb = dcsPriceService.findByPriceIdCatb(partialDynamoPrice);
-
-			List<String> updatesCata = new ArrayList<String>();
-			List<String> updatesCatb = new ArrayList<String>();
-
-			for (DcsPrice price : existingCata) {
-				updatesCata.add(dynService.xmlDeletePrice(price.getPriceId()));
-			}
-
-			for (DcsPrice price : existingCatb) {
-				updatesCatb.add(dynService.xmlDeletePrice(price.getPriceId()));
-			}
-			applyDynUpdatesPrices(updatesCata, "cata");
-			applyDynUpdatesPrices(updatesCatb, "catb");
-		}
-
+		List<DcsPrice> list = new ArrayList<>();
+		list.addAll(set);
+		return list;
 	}
 
-	private void applyDynUpdatesPrices(List<String> updates, String catalog) {
-		// TODO Auto-generated method stub
-		String partialString = "";
-		int counter = 0;
-
-		if (catalog.equals("cata")) {
-			dynService.changeToCata();
+	private List<WlmPrice> getUniqWlmPrice(List<WlmPrice> prices) {
+		Set<WlmPrice> set = new HashSet<WlmPrice>();
+		for (WlmPrice price : prices) {
+			set.add(price);
 		}
-		if (catalog.equals("catb")) {
-			dynService.changeToCatb();
-		}
-
-		for (String item : updates) {
-			partialString += item;
-			if (counter > 100) {
-				System.out.println("actualizando delta en prod dyn price " + catalog);
-				dynService.executeXmlPriceList(partialString);
-				partialString = "";
-				counter = 0;
-			}
-			counter++;
-		}
-		if (counter > 0) {
-			dynService.executeXmlPriceList(partialString);
-			partialString = "";
-			counter = 0;
-		}
-
+		List<WlmPrice> list = new ArrayList<>();
+		list.addAll(set);
+		return list;
 	}
 
-	private void applyDynamoChangesCampaigns(List<String> partialDynamoCampaign) {
-		String partialString = "";
-		int counter = 0;
-		for (String item : partialDynamoCampaign) {
-			partialString += item;
-			if (counter > 950) {
-				if (environment.equals("preview")) {
-					System.out.println("actualizando delta en preview dyn campaigns");
-					// Descomentar para actualizar en dyn admin
-					dynService.executeXmlCampaign(partialString);
-				}
-				if (environment.equals("prod")) {
-					System.out.println("actualizando delta en prod dyn campaigns");
-					dynService.changeToCatb();
-					// Descomentar para actualizar en dyn admin
-					dynService.executeXmlCampaign(partialString);
-					dynService.changeToCata();
-					// Descomentar para actualizar en dyn admin
-					dynService.executeXmlCampaign(partialString);
-				}
-				partialString = "";
-				counter = 0;
-			}
-			counter++;
+	private List<WlmCampaignItemList> getUniqCampaignsList(List<WlmCampaignItemList> campaignsList) {
+		Set<WlmCampaignItemList> set = new HashSet<WlmCampaignItemList>();
+		for (WlmCampaignItemList cList : campaignsList) {
+			set.add(cList);
 		}
-		if (counter > 0) {
-			if (environment.equals("preview")) {
-				System.out.println("actualizando delta en preview dyn campaigns");
-				// Descomentar para actualizar en dyn admin
-				dynService.executeXmlCampaign(partialString);
-			}
-			if (environment.equals("prod")) {
-				System.out.println("actualizando delta en prod dyn campaigns");
-				dynService.changeToCatb();
-				// Descomentar para actualizar en dyn admin
-				dynService.executeXmlCampaign(partialString);
-				dynService.changeToCata();
-				// Descomentar para actualizar en dyn admin
-				dynService.executeXmlCampaign(partialString);
-			}
-		}
+		List<WlmCampaignItemList> list = new ArrayList<>();
+		list.addAll(set);
+		return list;
+	}
+
+	private String addAction(String action) {
+		this.actions += this.actions.isEmpty() ? "" : " | ";
+		this.actions += action;
+		return this.actions;
 	}
 
 	static <T> List<List<T>> chopped(List<T> list, final int L) {
@@ -673,37 +680,89 @@ public class PriceListProjectService {
 		return parts;
 	}
 
-	private void deletePrices(List<WlmPrice> wlmPriceDeletes, List<DcsPrice> dcsPriceDeletes){
-		int sizeDcs = dcsPriceDeletes.size() / 8 + 1;
-		int sizeWlm = wlmPriceDeletes.size() / 8 + 1;
-		List<List<WlmPrice>> wlmPriceSplited = chopped(wlmPriceDeletes, sizeWlm);
-		List<List<DcsPrice>> dcsPriceSplited = chopped(dcsPriceDeletes, sizeDcs);
+	private void deleteCampaignItemsList(List<WlmCampaignItemList> campaignItems)
+			throws InterruptedException, ExecutionException {
+		int size = campaignItems.size() / 8 + 1;
+		List<List<WlmCampaignItemList>> campaignItemsListSplited = chopped(campaignItems, size);
 
-		if (sizeDcs > 100) {
-			dcsPriceService.deletePrices(dcsPriceSplited.get(0), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(1), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(2), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(3), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(4), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(5), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(6), environment);
-			dcsPriceService.deletePrices(dcsPriceSplited.get(7), environment);
-		} else {
-			dcsPriceService.deletePrices(dcsPriceDeletes, environment);
-		}
-		if (sizeWlm > 100) {
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(0), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(1), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(2), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(3), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(4), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(5), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(6), environment);
-			wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(7), environment);
-		} else {
-			wlmPriceService.deleteWlmPrices(wlmPriceDeletes, environment);
-		}
+		if (campaignItems.size() > 10) {
+			List<CompletableFuture<Integer>> futures = new ArrayList<>();
 
+			for (int i = 0; i < campaignItemsListSplited.size(); i++) {
+				int finalI = i;
+				futures.add(CompletableFuture.supplyAsync(() -> {
+					wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.get(finalI),
+							environment);
+					return 3;
+				}));
+			}
+
+			System.out.println("Deletes en campaignList");
+			CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[3]));
+
+			allOf.get();
+
+			/*
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(0), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(1), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(2), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(3), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(4), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(5), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(6), environment);
+			 * wlmCampaignItemListService.deleteCampaignListItems(campaignItemsListSplited.
+			 * get(7), environment);
+			 */
+		} else {
+			wlmCampaignItemListService.deleteCampaignListItems(campaignItems, environment);
+		}
+	}
+
+	private void saveCampaignItemsList(List<WlmCampaignItemList> campaignItems)
+			throws InterruptedException, ExecutionException {
+		int size = campaignItems.size() / 8 + 1;
+		List<List<WlmCampaignItemList>> campaignItemsListSplited = chopped(campaignItems, size);
+
+		if (campaignItems.size() > 10) {
+			CompletableFuture.allOf(
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(0), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(1), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(2), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(3), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(4), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(5), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(6), environment),
+					wlmCampaignItemListService.saveCampaignListItems(campaignItemsListSplited.get(7), environment))
+					.get();
+		} else {
+			wlmCampaignItemListService.saveCampaignListItems(campaignItems, environment);
+		}
+	}
+
+	private void saveCampaignItems(List<WlmCampaignItem> campaignItems)
+			throws InterruptedException, ExecutionException {
+		int size = campaignItems.size() / 8 + 1;
+		List<List<WlmCampaignItem>> campaignItemsSplited = chopped(campaignItems, size);
+
+		if (campaignItems.size() > 10) {
+			CompletableFuture.allOf(wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(0), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(1), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(2), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(3), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(4), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(5), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(6), environment),
+					wlmCampaignItemService.saveCampaignItems(campaignItemsSplited.get(7), environment)).get();
+		} else {
+			wlmCampaignItemService.saveCampaignItems(campaignItems, environment).get();
+		}
 	}
 
 	private void saveAllPriceUpdates(List<WlmPrice> partialWlmPriceUpdates, List<DcsPrice> dcsPriceUpdates)
@@ -713,7 +772,7 @@ public class PriceListProjectService {
 		List<List<WlmPrice>> wlmPriceSplited = chopped(partialWlmPriceUpdates, sizeWlm);
 		List<List<DcsPrice>> dcsPriceSplited = chopped(dcsPriceUpdates, sizeDcs);
 
-		if (sizeDcs > 100) {
+		if (dcsPriceUpdates.size() > 10) {
 			CompletableFuture.allOf(dcsPriceService.savePrices(dcsPriceSplited.get(0), environment),
 					dcsPriceService.savePrices(dcsPriceSplited.get(1), environment),
 					dcsPriceService.savePrices(dcsPriceSplited.get(2), environment),
@@ -725,7 +784,7 @@ public class PriceListProjectService {
 		} else {
 			dcsPriceService.savePrices(dcsPriceUpdates, environment).get();
 		}
-		if (sizeWlm > 100) {
+		if (partialWlmPriceUpdates.size() > 10) {
 			CompletableFuture.allOf(wlmPriceService.saveWlmPrices(wlmPriceSplited.get(0), environment),
 					wlmPriceService.saveWlmPrices(wlmPriceSplited.get(1), environment),
 					wlmPriceService.saveWlmPrices(wlmPriceSplited.get(2), environment),
@@ -735,36 +794,82 @@ public class PriceListProjectService {
 					wlmPriceService.saveWlmPrices(wlmPriceSplited.get(6), environment),
 					wlmPriceService.saveWlmPrices(wlmPriceSplited.get(7), environment)).get();
 		} else {
-			wlmPriceService.saveWlmPrices(partialWlmPriceUpdates, environment);
+			wlmPriceService.saveWlmPrices(partialWlmPriceUpdates, environment).get();
 		}
 
 	}
 
-	private String getIcons(String icon1, String icon2, WlmCampaignItemList wlmCampaignList0,
-			WlmCampaignItemList wlmCampaignList1) {
-		// TODO Auto-generated method stub
-		String icons = "";
-		if (icon1 != null) {
-			if (wlmCampaignList0 != null) {
-				if (!icon1.equals(wlmCampaignList0.getCampaigns())) {
-					icons += wlmCampaignList0.getCampaigns();
-				}
+	private void deletePrices(List<WlmPrice> wlmPriceDeletes, List<DcsPrice> dcsPriceDeletes)
+			throws InterruptedException, ExecutionException {
+		int sizeDcs = dcsPriceDeletes.size() / 8 + 1;
+		int sizeWlm = wlmPriceDeletes.size() / 8 + 1;
+		List<List<WlmPrice>> wlmPriceSplited = chopped(wlmPriceDeletes, sizeWlm);
+		List<List<DcsPrice>> dcsPriceSplited = chopped(dcsPriceDeletes, sizeDcs);
+
+		if (dcsPriceDeletes.size() > 10) {
+			List<CompletableFuture<Integer>> futures = new ArrayList<>();
+
+			for (int i = 0; i < dcsPriceSplited.size(); i++) {
+				int finalI = i;
+				futures.add(CompletableFuture.supplyAsync(() -> {
+					dcsPriceService.deletePrices(dcsPriceSplited.get(finalI), environment);
+					return 3;
+				}));
 			}
+
+			System.out.println("Deletes en dcsPrices");
+			CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[3]));
+
+			allOf.get();
+			/*
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(0), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(1), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(2), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(3), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(4), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(5), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(6), environment);
+			 * dcsPriceService.deletePrices(dcsPriceSplited.get(7), environment);
+			 */
+		} else {
+			dcsPriceService.deletePrices(dcsPriceDeletes, environment);
 		}
-		if (icon2 != null) {
-			if (wlmCampaignList1 != null) {
-				if (!icon1.equals(wlmCampaignList1.getCampaigns())) {
-					icons += icons.isEmpty() ? wlmCampaignList1.getCampaigns() : "," + icon2;
-				}
+		if (wlmPriceDeletes.size() > 10) {
+
+			List<CompletableFuture<Integer>> futures = new ArrayList<>();
+
+			for (int i = 0; i < wlmPriceSplited.size(); i++) {
+				int finalI = i;
+				futures.add(CompletableFuture.supplyAsync(() -> {
+					wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(finalI), environment);
+					return 3;
+				}));
 			}
+
+			System.out.println("Deletes en dcsPrices");
+			CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[3]));
+
+			allOf.get();
+			/*
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(0), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(1), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(2), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(3), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(4), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(5), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(6), environment);
+			 * wlmPriceService.deleteWlmPrices(wlmPriceSplited.get(7), environment);
+			 */
+		} else {
+			wlmPriceService.deleteWlmPrices(wlmPriceDeletes, environment);
 		}
-		return icons;
+
 	}
 
 	private PriceListProject getRollbackData(PriceListProject rollbackPriceListProject, DcsPrice currentDcsPricePack,
 			DcsPrice currentPriceBasePriceReference, DcsPrice curretPriceBasePriceSales, WlmPrice currentWlmPricePack,
-			WlmPrice wlmBasePriceReferece, WlmPrice wlmBasePriceSales, WlmCampaignItemList wlmCampaignList0,
-			WlmCampaignItemList wlmCampaignList1) {
+			WlmPrice wlmBasePriceReferece, WlmPrice wlmBasePriceSales, WlmCampaignItemList wlmCampaignList1,
+			WlmCampaignItemList wlmCampaignList2) {
 
 		rollbackPriceListProject.setId(null);
 		rollbackPriceListProject.setRollback(true);
@@ -784,12 +889,12 @@ public class PriceListProjectService {
 			rollbackPriceListProject.setBasePriceSales(curretPriceBasePriceSales.getListPrice());
 		}
 
-		if (wlmCampaignList0 != null) {
-			rollbackPriceListProject.setIcon1(wlmCampaignList0.getCampaigns());
+		if (wlmCampaignList1 != null) {
+			rollbackPriceListProject.setIcon1(wlmCampaignList1.getCampaigns());
 		}
 
-		if (wlmCampaignList1 != null) {
-			rollbackPriceListProject.setIcon2(wlmCampaignList1.getCampaigns());
+		if (wlmCampaignList2 != null) {
+			rollbackPriceListProject.setIcon2(wlmCampaignList2.getCampaigns());
 		}
 
 		return rollbackPriceListProject;
@@ -843,7 +948,7 @@ public class PriceListProjectService {
 			String pathFolder = locationBccFiles + auth.getName();
 			this.checkFolder(pathFolder);
 			long timestamp = System.currentTimeMillis() / 1000;
-			fileName = pathFolder + "/PriceBase_" + timestamp + "_" + sequence + ".csv";
+			fileName = pathFolder + "/PriceLoader_" + timestamp + "_" + sequence + ".csv";
 			ICsvBeanWriter csvWriter = new CsvBeanWriter(new FileWriter(fileName),
 					CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
 			String[] csvHeader = { "Product Number", "Physical Store ID", "List Price", "Sale Price", "TLMC Price",
@@ -866,15 +971,15 @@ public class PriceListProjectService {
 		}
 		return fileName;
 	}
-	
-	private List<WlmCampaignItem> getWlmCampaignItem (Set<String> setSkus){
+
+	private List<WlmCampaignItem> getWlmCampaignItem(Set<String> setSkus) {
 		Set<String> subset = new HashSet<>();
 		List<WlmCampaignItem> wlmCampaignItems = new ArrayList<>();
 		int counter = 0;
 
 		for (String skuId : setSkus) {
 			subset.add(skuId);
-			if (counter == 999) {
+			if (counter > 950) {
 				List<WlmCampaignItem> wlmCampaignItemsT = wlmCampaignItemRepository.findBySkuIdIn(subset);
 				if (wlmCampaignItemsT.size() > 0)
 					wlmCampaignItems.addAll(wlmCampaignItemsT);
@@ -899,7 +1004,7 @@ public class PriceListProjectService {
 
 		for (String skuId : setSkus) {
 			subset.add(skuId);
-			if (counter == 999) {
+			if (counter > 950) {
 				List<WlmCampaignItemList> wlmCampaignItemsT = wlmCampaignItemListRepository.findBySkuIdIn(subset);
 				if (wlmCampaignItemsT.size() > 0)
 					wlmCampaignItems.addAll(wlmCampaignItemsT);
@@ -924,7 +1029,7 @@ public class PriceListProjectService {
 
 		for (String priceId : setPricesIds) {
 			subset.add(priceId);
-			if (counter == 999) {
+			if (counter > 950) {
 				List<WlmPrice> wlmPricesT = wlmPriceService.findByPriceIdIn(subset);
 				if (wlmPricesT.size() > 0)
 					wlmPrices.addAll(wlmPricesT);
@@ -949,7 +1054,7 @@ public class PriceListProjectService {
 
 		for (String poductId : setProductIds) {
 			subset.add(poductId);
-			if (counter == 999) {
+			if (counter > 950) {
 				products.addAll(wlmProductService.findByProductIdIn(subset));
 				counter = 0;
 				subset.clear();
@@ -969,16 +1074,17 @@ public class PriceListProjectService {
 		int counter = 0;
 		int total = setSkusPriceList.size();
 
-		for (String skuId : setSkusPriceList)
+		for (String skuId : setSkusPriceList) {
 			subset.add(skuId);
-		if (counter == 999) {
-			List<DcsPrice> dcsPrices = dcsPriceService.findByskuIdIn(subset);
-			if (dcsPrices.size() > 0)
-				prices.addAll(dcsPrices);
-			counter = 0;
-			subset.clear();
+			if (counter > 950) {
+				List<DcsPrice> dcsPrices = dcsPriceService.findByskuIdIn(subset);
+				if (dcsPrices.size() > 0)
+					prices.addAll(dcsPrices);
+				counter = 0;
+				subset.clear();
+			}
+			counter++;
 		}
-		counter++;
 		if (counter > 0) {
 			List<DcsPrice> dcsPrices = dcsPriceService.findByskuIdIn(subset);
 			if (dcsPrices.size() > 0)

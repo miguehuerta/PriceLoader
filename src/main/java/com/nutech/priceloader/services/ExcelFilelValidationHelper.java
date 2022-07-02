@@ -139,12 +139,6 @@ public class ExcelFilelValidationHelper {
 			System.out.println("La cantidad de campos del archivo no es la esperada");
 		} finally {
 			try {
-				workbook.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			try {
 				file.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -377,12 +371,6 @@ public class ExcelFilelValidationHelper {
 		} catch (NoSuchElementException ex) {
 			errors.add("La cantidad de campos del archivo no es la esperada");
 		} finally {
-			try {
-				workbook.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 			try {
 				file.close();
 			} catch (IOException e) {
