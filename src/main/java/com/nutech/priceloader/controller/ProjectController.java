@@ -92,10 +92,10 @@ public class ProjectController {
 	}
 	
 	@PostMapping(path = "/nextStepFinish", produces = "application/json")
-	public void nextStepFinish(@RequestBody Project project, Authentication auth) {
-
+	public Project nextStepFinish(@RequestBody Project project, Authentication auth) {
+		Project myProject=null;
 			try {
-				Project myProject = service.getProject(project.getId()).get();
+				myProject = service.getProject(project.getId()).get();
 				List<Project> activeProjects = service.getActiveProject().get();
 				Long idActiveProject = activeProjects.get(0).getId();
 				if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
@@ -109,6 +109,7 @@ public class ProjectController {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			return myProject;
 	}
 
 	/*

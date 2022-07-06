@@ -197,6 +197,7 @@ const controls_2 = `
 `
 
 const controls_3 = `
+	<span>{{description}}</span>
 	<button class="btn btn-dark btn-sm" onclick=nextStepFinish({{id}})>Finalizar proyecto</button>
 	<button class="btn btn-light btn-sm border border-2" onclick=outProjectFromValidationArea({{id}})>Hacer rollback</button>
 `

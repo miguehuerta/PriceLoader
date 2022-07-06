@@ -28,7 +28,7 @@ public class PriceLoader2Application implements CommandLineRunner{
 		// TODO Auto-generated method stub
 		
 
-		System.out.println("Versión co más validaciones para actualizar dcsprice");
+		System.out.println("Versión con cambio en tamaño de archivos excel");
 
 		User migue = repository.getUserByUsername("migue@gmail.com");
 		
