@@ -67,17 +67,20 @@ public class DcsPriceService {
 			System.out.println("Saving a list of dcsPrices of size " + partialDcs.size() + " records");
 			final long start = System.currentTimeMillis();
 			prices = dcsPriceRepo.saveAll(partialDcs);
+			dcsPriceRepo.flush();
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
 		
 		if (environment.equals("prod")) {
 			System.out.println("actualizando delta en dcsPrice en prod");
-			System.out.println("Saving a list of wlmPrices of size " + partialDcs.size() + "records");
+			System.out.println("Saving a list of dcsPrices of size " + partialDcs.size() + "records");
 			final long start = System.currentTimeMillis();
 			catalogService.changeCatA();
 			prices = dcsPriceRepo.saveAll(partialDcs);
+			dcsPriceRepo.flush();
 			catalogService.changeCatB();
 			prices.addAll(dcsPriceRepo.saveAll(partialDcs));
+			dcsPriceRepo.flush();
 
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
@@ -112,11 +115,12 @@ public class DcsPriceService {
 	public void deletePrices(List<DcsPrice> partialDcs, String environment) {
 		// TODO Auto-generated method stub
 		if (environment.equals("preview")) {
-			System.out.println("borrando delta en dcsPrice dcsPrice en preview");
+			System.out.println("borrando delta en dcsPrice en preview");
 			catalogService.changeCatPreview();
 			System.out.println("Saving a list of dcsPrices of size " + partialDcs.size() + " records");
 			final long start = System.currentTimeMillis();
 			dcsPriceRepo.deleteAll(partialDcs);
+			dcsPriceRepo.flush();
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
 		
@@ -125,8 +129,10 @@ public class DcsPriceService {
 			final long start = System.currentTimeMillis();
 			catalogService.changeCatA();
 			dcsPriceRepo.deleteAll(partialDcs);
+			dcsPriceRepo.flush();
 			catalogService.changeCatB();
 			dcsPriceRepo.deleteAll(partialDcs);
+			dcsPriceRepo.flush();
 
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}

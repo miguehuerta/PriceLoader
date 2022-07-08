@@ -77,7 +77,13 @@ const nextStepValidation = (_id) => {
 const nextStepFinish = (_id) => {
 	data = { id: _id }
 	app.post(`${app.api}/nextStepFinish`, data)
-	.then( displayConsole() );
+	.then( (response) => {
+		console.log(response)
+		updateActiveProject();
+		displayConsole();
+	});
+	updateActiveProject();
+	displayConsole();
 }
 
 const getValidations = async (_id) => {
@@ -185,7 +191,7 @@ const activeProjectTemplate = `
 `
 
 const processingTemplate = `
-<span>{{description}}</span>
+<p>{{description}}</p>
 <div class="progress">
   	<div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100" style="width: {{progress}}%"></div>
 </div>
@@ -197,6 +203,7 @@ const controls_2 = `
 `
 
 const controls_3 = `
+	<p>{{{state}}}</p>
 	<button class="btn btn-dark btn-sm" onclick=nextStepFinish({{id}})>Finalizar proyecto</button>
 	<button class="btn btn-light btn-sm border border-2" onclick=outProjectFromValidationArea({{id}})>Hacer rollback</button>
 `

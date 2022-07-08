@@ -28,7 +28,7 @@ public class PriceLoader2Application implements CommandLineRunner{
 		// TODO Auto-generated method stub
 		
 
-
+		System.out.println("Versión con cambio en detalle al finalizar");
 
 		User migue = repository.getUserByUsername("migue@gmail.com");
 		
@@ -37,6 +37,17 @@ public class PriceLoader2Application implements CommandLineRunner{
 			String encodedPassword = bCryptPasswordEncoder.encode("nimda");
 			migue = new User("Miguel", "Huerta", "migue@gmail.com", encodedPassword, "ROLE_ADMIN", true);
 			repository.save(migue);
+			
+		}
+		
+		User migueOrtega = repository.getUserByUsername("miguelangel.ortega@walmart.com");
+		
+		if (migueOrtega==null) {
+			BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+			String encodedPassword = bCryptPasswordEncoder.encode("Kwm.9xrm.909zqrt@");
+			migueOrtega = new User("Miguel", "Ortega", "miguelangel.ortega@walmart.com", encodedPassword, "ROLE_ADMIN", true);
+			repository.save(migueOrtega);
+			
 		}
 		
 	}

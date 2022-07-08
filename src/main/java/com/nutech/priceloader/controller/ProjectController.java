@@ -35,7 +35,7 @@ public class ProjectController {
 
 	@Autowired
 	PriceListProjectService priceListProjectService;
-	
+
 	@Autowired
 	PriceListProjectRepository priceListProjectRepository;
 
@@ -53,99 +53,92 @@ public class ProjectController {
 	@PostMapping(path = "/nextStepValidation", produces = "application/json")
 	public void nextStepValidation(@RequestBody Project project, Authentication auth) {
 
-			try {
-				Project myProject = service.getProject(project.getId()).get();
-				List<Project> activeProjects = service.getActiveProject().get();
-				List<Project> projectsRuning = service.getProjectsRunning().get();
-				int projectsRunningQuantity = projectsRuning.size();
-				Long idActiveProject = activeProjects.get(0).getId();
-				if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
-						&& idActiveProject.equals(myProject.getId()) && projectsRunningQuantity == 1) {
-					myProject.setProcessing(true);
-					service.update(myProject);
-					List<PriceListProject> priceListProjectNoRollback = priceListProjectRepository.findByProjectAndIsRollback(myProject, false);
-					if (priceListProjectNoRollback.size() == 0) {
-						priceListProjectNoRollback = priceListProjectService.setPriceListFromProject(myProject, auth.getName());
-					}
-					//List<PriceListProject> myPriceListsProject = priceListProjectService.setPriceListFromProject(myProject, auth.getName());
-
-					try {
-						priceListProjectService.doValidations(priceListProjectNoRollback, myProject, false, auth);
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-
-					myProject.setStep(3);
-					myProject.setProcessing(false);
-					service.update(myProject);
+		try {
+			Project myProject = service.getProject(project.getId()).get();
+			List<Project> activeProjects = service.getActiveProject().get();
+			Long idActiveProject = activeProjects.get(0).getId();
+			if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
+					&& idActiveProject.equals(myProject.getId())) {
+				myProject.setProcessing(true);
+				service.update(myProject);
+				List<PriceListProject> priceListProjectNoRollback = priceListProjectRepository
+						.findByProjectAndIsRollback(myProject, false);
+				if (priceListProjectNoRollback.size() == 0) {
+					priceListProjectNoRollback = priceListProjectService.setPriceListFromProject(myProject,
+							auth.getName());
 				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (CloneNotSupportedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} 
-	}
-	
-	@PostMapping(path = "/nextStepFinish", produces = "application/json")
-	public void nextStepFinish(@RequestBody Project project, Authentication auth) {
+				// List<PriceListProject> myPriceListsProject =
+				// priceListProjectService.setPriceListFromProject(myProject, auth.getName());
 
-			try {
-				Project myProject = service.getProject(project.getId()).get();
-				List<Project> activeProjects = service.getActiveProject().get();
-				List<Project> projectsRuning = service.getProjectsRunning().get();
-				int projectsRunningQuantity = projectsRuning.size();
+				try {
+					priceListProjectService.doValidations(priceListProjectNoRollback, myProject, false, auth);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				myProject.setStep(3);
+				myProject.setProcessing(false);
+				service.update(myProject);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	@PostMapping(path = "/nextStepFinish", produces = "application/json")
+	public Project nextStepFinish(@RequestBody Project project, Authentication auth) {
+		Project myProject = null;
+		try {
+			myProject = service.getProject(project.getId()).get();
+			List<Project> activeProjects = service.getActiveProject().get();
+			if (activeProjects.size() > 0) {
 				Long idActiveProject = activeProjects.get(0).getId();
 				if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
-						&& idActiveProject.equals(myProject.getId()) && projectsRunningQuantity == 1) {
+						&& idActiveProject.equals(myProject.getId())) {
 					myProject.setStep(4);
 					service.update(myProject);
 				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return myProject;
 	}
 
 	/*
-	@PostMapping(path = "/nextStepValidation", produces = "application/json")
-	public DeferredResult<ResponseEntity<?>> nextStepValidation(@RequestBody Project project, Authentication auth)
-			throws InterruptedException, ExecutionException {
-		DeferredResult<ResponseEntity<?>> output = new DeferredResult<>();
-		ForkJoinPool.commonPool().submit(() -> {
-			try {
-				Project myProject = service.getProject(project.getId()).get();
-				List<Project> activeProjects = service.getActiveProject().get();
-				List<Project> projectsRuning = service.getProjectsRunning().get();
-				int projectsRunningQuantity = projectsRuning.size();
-				Long idActiveProject = activeProjects.get(0).getId();
-				if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
-						&& idActiveProject.equals(myProject.getId()) && projectsRunningQuantity == 0) {
-					myProject.setProcessing(true);
-					service.update(myProject);
-					List<PriceListProject> myPriceListsProject = priceListProjectService.setPriceListFromProject(myProject, auth.getName());
-					priceListProjectService.doValidations(myPriceListsProject);
-					myProject.setStep(3);
-					myProject.setProcessing(false);
-					service.update(myProject);
-				}
-			} catch (InterruptedException e) {
-				
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			output.setResult(ResponseEntity.ok("ok"));
-		});
-		return output;
-	}
-	*/
+	 * @PostMapping(path = "/nextStepValidation", produces = "application/json")
+	 * public DeferredResult<ResponseEntity<?>> nextStepValidation(@RequestBody
+	 * Project project, Authentication auth) throws InterruptedException,
+	 * ExecutionException { DeferredResult<ResponseEntity<?>> output = new
+	 * DeferredResult<>(); ForkJoinPool.commonPool().submit(() -> { try { Project
+	 * myProject = service.getProject(project.getId()).get(); List<Project>
+	 * activeProjects = service.getActiveProject().get(); List<Project>
+	 * projectsRuning = service.getProjectsRunning().get(); int
+	 * projectsRunningQuantity = projectsRuning.size(); Long idActiveProject =
+	 * activeProjects.get(0).getId(); if
+	 * (myProject.getUser().getUsername().equals(auth.getName()) &&
+	 * activeProjects.size() == 1 && idActiveProject.equals(myProject.getId()) &&
+	 * projectsRunningQuantity == 0) { myProject.setProcessing(true);
+	 * service.update(myProject); List<PriceListProject> myPriceListsProject =
+	 * priceListProjectService.setPriceListFromProject(myProject, auth.getName());
+	 * priceListProjectService.doValidations(myPriceListsProject);
+	 * myProject.setStep(3); myProject.setProcessing(false);
+	 * service.update(myProject); } } catch (InterruptedException e) {
+	 * 
+	 * } catch (ExecutionException e) { // TODO Auto-generated catch block
+	 * e.printStackTrace(); } output.setResult(ResponseEntity.ok("ok")); }); return
+	 * output; }
+	 */
 
 	@PostMapping(path = "/addProjectToExecutionArea", produces = "application/json")
 	public List<Project> addProjectToExecutionArea(@RequestBody Project project, Authentication auth)
@@ -171,12 +164,14 @@ public class ProjectController {
 				&& idActiveProject.equals(myProject.getId()) && projectsRunningQuantity == 0) {
 			myProject.setProcessing(true);
 			service.update(myProject);
-			
-			List<PriceListProject> priceListProjectRollback = priceListProjectRepository.findByProjectAndIsRollback(myProject, true);
+
+			List<PriceListProject> priceListProjectRollback = priceListProjectRepository
+					.findByProjectAndIsRollback(myProject, true);
 			if (priceListProjectRollback.size() == 0) {
 				priceListProjectRollback = priceListProjectService.setPriceListFromProject(myProject, auth.getName());
 			}
-			//List<PriceListProject> myPriceListsProject = priceListProjectService.setPriceListFromProject(myProject, auth.getName());
+			// List<PriceListProject> myPriceListsProject =
+			// priceListProjectService.setPriceListFromProject(myProject, auth.getName());
 			try {
 				priceListProjectService.doValidations(priceListProjectRollback, myProject, true, auth);
 			} catch (CloneNotSupportedException e) {
@@ -186,7 +181,7 @@ public class ProjectController {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 			priceListProjectService.deletePriceListsProjectByProject(myProject);
 			myProject.setStep(2);
 			myProject.setProcessing(false);

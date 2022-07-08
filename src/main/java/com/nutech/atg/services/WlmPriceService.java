@@ -37,6 +37,7 @@ public class WlmPriceService {
 			System.out.println("Saving a list of wlmPrices of size " + partialWlmPriceUpdates.size() + "records");
 			final long start = System.currentTimeMillis();
 			prices = wlmPriceRepository.saveAll(partialWlmPriceUpdates);
+			wlmPriceRepository.flush();
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 			
 		}
@@ -46,8 +47,10 @@ public class WlmPriceService {
 			final long start = System.currentTimeMillis();
 			catalogService.changeCatA();
 			prices = wlmPriceRepository.saveAll(partialWlmPriceUpdates);
+			wlmPriceRepository.flush();
 			catalogService.changeCatB();
 			prices.addAll(wlmPriceRepository.saveAll(partialWlmPriceUpdates));
+			wlmPriceRepository.flush();
 
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
@@ -63,6 +66,7 @@ public class WlmPriceService {
 			System.out.println("deleting a list of wlmPrices of size " + partialWlmPriceDeletes.size() + "records");
 			final long start = System.currentTimeMillis();
 			wlmPriceRepository.deleteAll(partialWlmPriceDeletes);
+			wlmPriceRepository.flush();
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 			
 		}
@@ -72,8 +76,10 @@ public class WlmPriceService {
 			final long start = System.currentTimeMillis();
 			catalogService.changeCatA();
 			wlmPriceRepository.deleteAll(partialWlmPriceDeletes);
+			wlmPriceRepository.flush();
 			catalogService.changeCatB();
 			wlmPriceRepository.deleteAll(partialWlmPriceDeletes);
+			wlmPriceRepository.flush();
 
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
