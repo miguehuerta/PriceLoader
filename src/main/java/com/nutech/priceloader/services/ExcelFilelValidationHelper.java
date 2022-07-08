@@ -63,10 +63,11 @@ public class ExcelFilelValidationHelper {
 			if (!types.contains(typeCell)) {
 				return false;
 			} else {
-				if (!fieldWaited.equals(""))
-					if (!fieldWaited.equals(cell.getRichStringCellValue().toString().replaceAll(" ", ""))) {
+				if (!fieldWaited.equals("")) {
+					if (!fieldWaited.toString().equals(cell.getRichStringCellValue().toString().replaceAll(" ", ""))) {
 						return false;
 					}
+				}
 			}
 		} catch (IllegalStateException ex) {
 			System.out.println("Fallo conversión");
@@ -284,9 +285,7 @@ public class ExcelFilelValidationHelper {
 				e.printStackTrace();
 			}
 		}
-
 		return errors;
-
 	}
 
 
@@ -310,57 +309,57 @@ public class ExcelFilelValidationHelper {
 				case 0:
 					if (!validateField(cell, cons.STR(), cons.getStoreField()))
 						errors.add(String
-								.format("El campo con coordennadas A1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getStoreField(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas A1 es incorrecto, se esperaba %s",
+										cons.getStoreField())
 								.toString());
 					break;
 				case 1:
 					if (!validateField(cell, cons.STR(), cons.getProductField()))
 						errors.add(String
-								.format("El campo con coordennadas B1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getProductField(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas B1 es incorrecto, se esperaba %s",
+										cons.getProductField())
 								.toString());
 					break;
 				case 2:
 					if (!validateField(cell, cons.STR(), cons.getBasePriceField()))
 						errors.add(String
-								.format("El campo con coordennadas C1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getBasePriceField(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas C1 es incorrecto, se esperaba %s",
+										cons.getBasePriceField())
 								.toString());
 					break;
 				case 3:
 					if (!validateField(cell, cons.STR(), cons.getSalePriceField()))
 						errors.add(String
-								.format("El campo con coordennadas D1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getSalePriceField(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas D1 es incorrecto, se esperaba %s",
+										cons.getSalePriceField())
 								.toString());
 					break;
 				case 4:
 					if (!validateField(cell, cons.STR(), cons.getIcon1Field()))
 						errors.add(String
-								.format("El campo con coordennadas E1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getIcon1Field(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas E1 es incorrecto, se esperaba %s",
+										cons.getIcon1Field())
 								.toString());
 					break;
 				case 5:
 					if (!validateField(cell, cons.STR(), cons.getIcon2Field()))
 						errors.add(String
-								.format("El campo con coordennadas F1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getIcon2Field(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas F1 es incorrecto, se esperaba %s",
+										cons.getIcon2Field())
 								.toString());
 					break;
 				case 6:
 					if (!validateField(cell, cons.STR(), cons.getPackSize()))
 						errors.add(String
-								.format("El campo con coordennadas G1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getPackSize(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas G1 es incorrecto, se esperaba %s",
+										cons.getPackSize())
 								.toString());
 					break;
 				case 7:
 					if (!validateField(cell, cons.STR(), cons.getPackPrice()))
 						errors.add(String
-								.format("El campo con coordennadas H1 es incorrecto, se esperaba %s y contiene %s",
-										cons.getPackPrice(), cell.getRichStringCellValue().toString())
+								.format("El campo con coordennadas H1 es incorrecto, se esperaba %s",
+										cons.getPackPrice())
 								.toString());
 					break;
 				}

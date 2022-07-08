@@ -235,9 +235,8 @@ public class PriceListProjectService {
 					wlmCampaignItemListMap, auth, isRollback, project, productsMap);
 		}
 
-		
 		System.out.println("Esperando 15 segundos");
-		Thread.sleep(15000);
+		Thread.sleep(5000);
 
 		///////////////////////// FIN parte analizar data/////////////////
 
@@ -246,13 +245,13 @@ public class PriceListProjectService {
 		// Esto es para actualizar los precios
 		this.saveAllPriceUpdates(this.partialWlmPriceUpdates, this.partialDcsPriceUpdates);
 
-		Thread.sleep(10000);
+		Thread.sleep(5000);
 
 		// Esto es para borrar los precios
 		this.deletePrices(this.getUniqWlmPrice(this.partialWlmPriceDeletes),
 				this.getUniqDcsPrice(this.partialDcsPriceDeletes));
 
-		Thread.sleep(10000);
+		Thread.sleep(5000);
 
 		// Borrar CampaignItemnList
 		List<WlmCampaignItemList> uniqDeleteList = this.getUniqCampaignsList(this.partialWlmCampaignItemListDeletes);
@@ -260,7 +259,7 @@ public class PriceListProjectService {
 				+ uniqDeleteList.size());
 		this.deleteCampaignItemsList(uniqDeleteList);
 
-		Thread.sleep(10000);
+		Thread.sleep(5000);
 
 		// Guardar nuevos CampaingItem
 
@@ -271,7 +270,7 @@ public class PriceListProjectService {
 			e.printStackTrace();
 		}
 
-		Thread.sleep(10000);
+		Thread.sleep(5000);
 
 		// Guardar nuevos CampaignItemList primero sacando únicos y validando no existen
 		List<WlmCampaignItemList> uniqimsertsList = this.getUniqCampaignsList(this.partialWlmCampaignItemListInserts);
@@ -294,20 +293,21 @@ public class PriceListProjectService {
 				+ this.bcc;
 
 		System.out.println(report);
-		projectService.setState(project, report);
-
-		
+		List<PriceListProject> uniqPlp = getUniqPriceListProject(this.bccItems);
+		projectService.setState(project,
+				"<span>Se encontraron " + this.updatePack + " packPrice de " + this.totalPack + " requeridos</span><br>"
+						+ "<span>Se encontraron " + this.updateBase + " basePrice de " + this.totalBase + " requeridos</span><br>"
+						+ "<span>Se encontraron " + this.updateSales + "priceSale de " + this.totalSales + " requeridos</span><br>"
+						+ "<span>Cantidad de registros hacia bcc :" + uniqPlp.size()+"</span>");
 		if (this.bccItems.size() > 0) {
-			System.out.println("Cantidad antes de bcc items "+this.bccItems.size());
-			List<PriceListProject> uniqPlp = getUniqPriceListProject(this.bccItems);
-			System.out.println("Cantidad después de bcc items "+uniqPlp.size());
+			System.out.println("Cantidad antes de bcc items " + this.bccItems.size());
+			System.out.println("Cantidad después de bcc items " + uniqPlp.size());
 			this.generateBccFiles(uniqPlp, auth);
 		}
-		
 
 		try {
 			for (PriceListProject rollbackItem : this.rollbackPriceListProjectList) {
-				if (rollbackItem!=null && rollbackItem.getId()!=null ) {
+				if (rollbackItem != null && rollbackItem.getId() != null) {
 					rollbackItem.setId(null);
 				}
 			}
@@ -320,6 +320,7 @@ public class PriceListProjectService {
 			priceListProjectRepository.saveAll(this.rollbackPriceListProjectList);
 		}
 	}
+	
 
 	@Async
 	private void priceValidations(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
@@ -364,7 +365,6 @@ public class PriceListProjectService {
 
 			PriceListProject rollbackPriceListProject = (PriceListProject) item.clone();
 
-			
 			if (!isRollback) {
 				rollbackPriceListProject = getRollbackData(rollbackPriceListProject, currentDcsPricePack,
 						currentDcsPriceBasePriceReference, currentDcsPriceBasePriceSales, currentWlmPricePack,
@@ -407,7 +407,8 @@ public class PriceListProjectService {
 						this.bcc++;
 						this.bccItems.add(item);
 						insert = true;
-						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='"+skuId+"' and price_list='"+storeId.toString() + ";PackPrice' union");
+						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
+								+ "' and price_list='" + storeId.toString() + ";PackPrice' union");
 					}
 				} else {
 					if (currentDcsPricePack != null) {
@@ -442,7 +443,8 @@ public class PriceListProjectService {
 						this.bcc++;
 						this.bccItems.add(item);
 						insert = true;
-						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='"+skuId+"' and price_list='"+storeId.toString() + ";ListPrice' union");
+						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
+								+ "' and price_list='" + storeId.toString() + ";ListPrice' union");
 					}
 				} else {
 
@@ -476,7 +478,8 @@ public class PriceListProjectService {
 						this.bcc++;
 						this.bccItems.add(item);
 						insert = true;
-						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='"+skuId+"' and price_list='"+storeId.toString() + ";SalePrice' union");
+						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
+								+ "' and price_list='" + storeId.toString() + ";SalePrice' union");
 					}
 				} else {
 					if (currentDcsPriceBasePriceSales != null) {
@@ -723,7 +726,7 @@ public class PriceListProjectService {
 		list.addAll(set);
 		return list;
 	}
-	
+
 	private List<DcsPrice> getUniqDcsPrice(List<DcsPrice> prices) {
 		Set<DcsPrice> set = new HashSet<DcsPrice>();
 		for (DcsPrice price : prices) {

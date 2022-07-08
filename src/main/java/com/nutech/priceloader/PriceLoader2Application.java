@@ -28,7 +28,7 @@ public class PriceLoader2Application implements CommandLineRunner{
 		// TODO Auto-generated method stub
 		
 
-		System.out.println("Versión con cambio en tamaño de archivos excel");
+		System.out.println("Versión con cambio en detalle al finalizar");
 
 		User migue = repository.getUserByUsername("migue@gmail.com");
 		
