@@ -45,9 +45,9 @@ public class PostgresqlConfiguration {
 		em.setJpaVendorAdapter(vendorAdapter);
 		HashMap<String, Object> properties = new HashMap<>();
 		properties.put("hibernate.hbm2ddl.auto", env.getProperty("postgres.hibernate.hbm2ddl.auto"));
-		properties.put("hibernate.show_sql", env.getProperty("postgres.hibernate.show_sql"));
+		//properties.put("hibernate.show_sql", env.getProperty("postgres.hibernate.show_sql"));
 		properties.put("spring.datasource.testWhileIdle", env.getProperty("postgres.spring.datasource.testWhileIdle"));
-		properties.put("hibernate.format_sql", env.getProperty("postgres.hibernate.format_sql"));
+		//properties.put("hibernate.format_sql", env.getProperty("postgres.hibernate.format_sql"));
 		properties.put("datasource.validationQuery", env.getProperty("postgres.datasource.validationQuery"));
 		//properties.put("spring.jpa.hibernate.naming.implicit-strategy", env.getProperty("postgres.jpa.hibernate.naming.implicit-strategy"));
 		//properties.put("hibernate.jpa.hibernate.naming.physical-strategy", env.getProperty("postgres.jpa.hibernate.naming.physical-strategy"));

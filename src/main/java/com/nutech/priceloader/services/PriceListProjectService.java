@@ -266,7 +266,7 @@ public class PriceListProjectService {
 		///////////////////////// FIN parte analizar data/////////////////
 
 		//////////////////////// ACTUALIZACION/////////////////////////
-
+		
 		// Esto es para actualizar los precios
 		this.saveAllPriceUpdates(this.partialWlmPriceUpdates, this.partialDcsPriceUpdates);
 
@@ -307,7 +307,7 @@ public class PriceListProjectService {
 			e.printStackTrace();
 			wlmCampaignItemListService.saveCampaignListItemsOneByOne(uniqimsertsList, environment);
 		}
-
+		
 		/////////////////////// FIN ACTUALIZACION/////////////////////////////////
 
 		project.setProcessedPercentage(100);
@@ -325,11 +325,15 @@ public class PriceListProjectService {
 						+ " requeridos</span><br>" + "<span>Se encontraron " + this.updateSales + "priceSale de "
 						+ this.totalSales + " requeridos</span><br>" + "<span>Cantidad de registros hacia bcc :"
 						+ uniqPlp.size() + "</span>");
+		
+		
+		
 		if (this.bccItems.size() > 0) {
 			System.out.println("Cantidad antes de bcc items " + this.bccItems.size());
 			System.out.println("Cantidad después de bcc items " + uniqPlp.size());
 			this.generateBccFiles(uniqPlp, auth);
 		}
+		
 
 		try {
 			for (PriceListProject rollbackItem : this.rollbackPriceListProjectList) {
@@ -342,8 +346,10 @@ public class PriceListProjectService {
 			System.out.println("Error guardando rollback");
 		}
 		if (isRollback == false) {
-			priceListProjectRepository.saveAll(myPriceListsProject);
-			priceListProjectRepository.saveAll(this.rollbackPriceListProjectList);
+			if (myPriceListsProject.size()>0)
+				priceListProjectRepository.saveAll(myPriceListsProject);
+			if (this.rollbackPriceListProjectList.size()>0)
+				priceListProjectRepository.saveAll(this.rollbackPriceListProjectList);
 		}
 	}
 
@@ -711,7 +717,10 @@ public class PriceListProjectService {
 				item.setError(true);
 			}
 			this.percentageUpdates = (int) this.i * 100 / this.total;
-			projectService.setProgress(project, this.percentageUpdates);
+			if (this.percentageUpdates % 20 == 0) {
+				System.out.println("Actualizando estatus"+this.percentageUpdates);
+				projectService.setProgress(project, this.percentageUpdates);
+			}
 			this.i++;
 		}
 	}

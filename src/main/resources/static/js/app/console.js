@@ -191,7 +191,7 @@ const activeProjectTemplate = `
 `
 
 const processingTemplate = `
-<p>{{description}}</p>
+<p>{{{description}}}</p>
 <div class="progress">
   	<div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100" style="width: {{progress}}%"></div>
 </div>
