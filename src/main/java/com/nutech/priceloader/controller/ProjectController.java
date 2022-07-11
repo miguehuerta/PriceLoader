@@ -61,14 +61,8 @@ public class ProjectController {
 					&& idActiveProject.equals(myProject.getId())) {
 				myProject.setProcessing(true);
 				service.update(myProject);
-				List<PriceListProject> priceListProjectNoRollback = priceListProjectRepository
-						.findByProjectAndIsRollback(myProject, false);
-				if (priceListProjectNoRollback.size() == 0) {
-					priceListProjectNoRollback = priceListProjectService.setPriceListFromProject(myProject,
-							auth.getName());
-				}
-				// List<PriceListProject> myPriceListsProject =
-				// priceListProjectService.setPriceListFromProject(myProject, auth.getName());
+				
+				List<PriceListProject> priceListProjectNoRollback = priceListProjectService.setPriceListFromProject(myProject,auth.getName());
 
 				try {
 					priceListProjectService.doValidations(priceListProjectNoRollback, myProject, false, auth);
@@ -78,6 +72,42 @@ public class ProjectController {
 				}
 
 				myProject.setStep(3);
+				myProject.setProcessing(false);
+				service.update(myProject);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (CloneNotSupportedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@PostMapping(path = "/generateBccFiles", produces = "application/json")
+	public void generateBccFiles(@RequestBody Project project, Authentication auth) {
+
+		try {
+			Project myProject = service.getProject(project.getId()).get();
+			List<Project> activeProjects = service.getActiveProject().get();
+			Long idActiveProject = activeProjects.get(0).getId();
+			if (myProject.getUser().getUsername().equals(auth.getName()) && activeProjects.size() == 1
+					&& idActiveProject.equals(myProject.getId())) {
+				myProject.setProcessing(true);
+				service.update(myProject);
+
+				List<PriceListProject> priceListProjectNoRollback = priceListProjectService.setPriceListFromProject(myProject,auth.getName());
+				
+				try {
+					priceListProjectService.generateBccFiles(priceListProjectNoRollback, myProject, false, auth);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				myProject.setStep(2);
 				myProject.setProcessing(false);
 				service.update(myProject);
 			}

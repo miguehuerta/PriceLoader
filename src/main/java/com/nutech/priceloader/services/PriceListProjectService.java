@@ -127,6 +127,30 @@ public class PriceListProjectService {
 	private List<WlmCampaignItemList> partialWlmCampaignItemListDeletes = new ArrayList<>();
 	private List<WlmCampaignItemList> partialWlmCampaignItemListInserts = new ArrayList<>();
 
+	private void initialize() {
+		this.actions = "";
+		this.i = 0;
+		this.total = 0;
+		this.percentageUpdates = 0;
+		this.updatePack = 0;
+		this.updateBase = 0;
+		this.updateSales = 0;
+		this.totalPack = 0;
+		this.totalBase = 0;
+		this.totalSales = 0;
+		this.bcc = 0;
+
+		this.rollbackPriceListProjectList.clear();
+		this.bccItems.clear();
+		this.partialDcsPriceUpdates.clear();
+		this.partialDcsPriceDeletes.clear();
+		this.partialWlmPriceUpdates.clear();
+		this.partialWlmPriceDeletes.clear();
+		this.partialWlmCampaignItemInserts.clear();
+		this.partialWlmCampaignItemListDeletes.clear();
+		this.partialWlmCampaignItemListInserts.clear();
+	}
+
 	public List<PriceListProject> setPriceListFromProject(Project myProject, String name) {
 		// TODO Auto-generated method stub
 		System.out.println("Thread used for this is " + Thread.currentThread().getName());
@@ -156,6 +180,7 @@ public class PriceListProjectService {
 	public void doValidations(List<PriceListProject> myPriceListsProject, Project project, boolean isRollback,
 			Authentication auth)
 			throws CloneNotSupportedException, IOException, InterruptedException, ExecutionException {
+		this.initialize();
 		this.total = myPriceListsProject.size();
 		System.out.println("Comenzando a recopilar informacion de bd");
 
@@ -296,9 +321,10 @@ public class PriceListProjectService {
 		List<PriceListProject> uniqPlp = getUniqPriceListProject(this.bccItems);
 		projectService.setState(project,
 				"<span>Se encontraron " + this.updatePack + " packPrice de " + this.totalPack + " requeridos</span><br>"
-						+ "<span>Se encontraron " + this.updateBase + " basePrice de " + this.totalBase + " requeridos</span><br>"
-						+ "<span>Se encontraron " + this.updateSales + "priceSale de " + this.totalSales + " requeridos</span><br>"
-						+ "<span>Cantidad de registros hacia bcc :" + uniqPlp.size()+"</span>");
+						+ "<span>Se encontraron " + this.updateBase + " basePrice de " + this.totalBase
+						+ " requeridos</span><br>" + "<span>Se encontraron " + this.updateSales + "priceSale de "
+						+ this.totalSales + " requeridos</span><br>" + "<span>Cantidad de registros hacia bcc :"
+						+ uniqPlp.size() + "</span>");
 		if (this.bccItems.size() > 0) {
 			System.out.println("Cantidad antes de bcc items " + this.bccItems.size());
 			System.out.println("Cantidad después de bcc items " + uniqPlp.size());
@@ -320,7 +346,6 @@ public class PriceListProjectService {
 			priceListProjectRepository.saveAll(this.rollbackPriceListProjectList);
 		}
 	}
-	
 
 	@Async
 	private void priceValidations(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
@@ -357,8 +382,6 @@ public class PriceListProjectService {
 			WlmPrice currentWlmBasePriceSales = currentDcsPriceBasePriceSales != null
 					? wlmPriceMap.get(currentDcsPriceBasePriceSales.getPriceId())
 					: null;
-
-			WlmCampaignItem currentwlmCampaignItem = wlmCampaignItemMap.get(skuId + ";" + storeId);
 
 			WlmCampaignItemList currentwlmCampaignItemList1 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";0");
 			WlmCampaignItemList currentwlmCampaignItemList2 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";1");
@@ -404,11 +427,7 @@ public class PriceListProjectService {
 						}
 					} else {
 						// Es inserción
-						this.bcc++;
-						this.bccItems.add(item);
 						insert = true;
-						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
-								+ "' and price_list='" + storeId.toString() + ";PackPrice' union");
 					}
 				} else {
 					if (currentDcsPricePack != null) {
@@ -440,11 +459,7 @@ public class PriceListProjectService {
 						}
 					} else {
 						// Es inserción
-						this.bcc++;
-						this.bccItems.add(item);
 						insert = true;
-						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
-								+ "' and price_list='" + storeId.toString() + ";ListPrice' union");
 					}
 				} else {
 
@@ -474,12 +489,8 @@ public class PriceListProjectService {
 							}
 						}
 					} else {
-						// Es inserción
-						this.bcc++;
-						this.bccItems.add(item);
+						// Es inserció
 						insert = true;
-						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
-								+ "' and price_list='" + storeId.toString() + ";SalePrice' union");
 					}
 				} else {
 					if (currentDcsPriceBasePriceSales != null) {
@@ -490,10 +501,9 @@ public class PriceListProjectService {
 					}
 				}
 
-				boolean wlmCampaignItemInserted = false, wlmCampaignItemList1Inserted = false,
-						wlmCampaignItemList1Updated = false, wlmCampaignItemList1Deleted = false,
-						wlmCampaignItemList2Inserted = false, wlmCampaignItemList2Updated = false,
-						wlmCampaignItemList2Deleted = false;
+				boolean wlmCampaignItemList1Inserted = false, wlmCampaignItemList1Updated = false,
+						wlmCampaignItemList1Deleted = false, wlmCampaignItemList2Inserted = false,
+						wlmCampaignItemList2Updated = false, wlmCampaignItemList2Deleted = false;
 
 				if (icon1 != null) {
 					if (currentwlmCampaignItemList1 != null) {
@@ -530,14 +540,7 @@ public class PriceListProjectService {
 					}
 				}
 
-				if (currentwlmCampaignItem == null
-						&& (wlmCampaignItemList1Inserted == true || wlmCampaignItemList2Inserted == true)) {
-					WlmCampaignItem wlmCampaignItem = new WlmCampaignItem(skuId.toString(), storeId.toString());
-					currentwlmCampaignItem = wlmCampaignItem;
-					wlmCampaignItemInserted = true;
-				}
-
-				if (insert == false) {
+				if (insert == true) {
 					// Se evalua si se actualizó y se agrega
 					if (dcsPackPriceUpdated == true && !currentDcsPricePack.getPriceId().isEmpty()) {
 						if (currentDcsPricePack != null) {
@@ -699,10 +702,6 @@ public class PriceListProjectService {
 					if (wlmCampaignItemList2Deleted == true) {
 						this.addAction("Bajando icon2");
 						this.partialWlmCampaignItemListDeletes.add(currentwlmCampaignItemList2);
-					}
-
-					if (wlmCampaignItemInserted == true) {
-						this.partialWlmCampaignItemInserts.add(currentwlmCampaignItem);
 					}
 				}
 				item.setActionPeformed(this.actions);
@@ -1208,6 +1207,486 @@ public class PriceListProjectService {
 	public List<PriceListProject> findByProject(Project myProject, boolean isRollback) {
 		// TODO Auto-generated method stub
 		return priceListProjectRepository.findByProjectAndIsRollback(myProject, isRollback);
+	}
+
+	public void generateBccFiles(List<PriceListProject> myPriceListsProject, Project project, boolean isRollback,
+			Authentication auth)
+			throws CloneNotSupportedException, IOException, InterruptedException, ExecutionException {
+		this.initialize();
+		this.total = myPriceListsProject.size();
+		System.out.println("Comenzando a recopilar informacion de bd");
+
+		projectService.setState(project, "Recopilanndo datos");
+		projectService.setProgress(project, 5);
+
+		if (environment.equals("preview")) {
+			catalogService.changeCatPreview();
+		}
+		if (environment.equals("prod")) {
+			dynService.changeToCatb();
+		}
+
+		Set<String> setSkusPriceList = myPriceListsProject.stream().map(PriceListProject::getProductNbr)
+				.collect(Collectors.toSet()).stream().map(String::valueOf).collect(Collectors.toSet());
+
+		Set<String> setProductIds = myPriceListsProject.stream().map(item -> "PROD_" + item.getProductNbr())
+				.collect(Collectors.toSet()).stream().map(String::valueOf).collect(Collectors.toSet());
+		List<WlmProduct> products = this.getProducts(setProductIds);
+		List<DcsPrice> prices = this.getPrices(setSkusPriceList);
+		Set<String> setPricesIds = prices.stream().map(item -> item.getPriceId()).collect(Collectors.toSet()).stream()
+				.map(String::valueOf).collect(Collectors.toSet());
+		List<WlmPrice> wlmPrices = this.getWlmPrices(setPricesIds);
+		List<WlmCampaignItem> wlmCampaignItems = this.getWlmCampaignItem(setSkusPriceList);
+		List<WlmCampaignItemList> wlmCampaignItemLists = this.getWlmCampaignItemLists(setSkusPriceList);
+		Map<String, WlmProduct> productsMap = new HashMap<>();
+		Map<String, DcsPrice> pricesMap = new HashMap<>();
+		Map<String, WlmPrice> wlmPriceMap = new HashMap<>();
+		Map<String, WlmCampaignItem> wlmCampaignItemMap = new HashMap<>();
+		Map<String, WlmCampaignItemList> wlmCampaignItemListMap = new HashMap<>();
+
+		for (WlmProduct product : products) {
+			productsMap.put(product.getProductId(), product);
+		}
+		for (DcsPrice price : prices) {
+			pricesMap.put(price.getSkuId() + ";" + price.getPriceList(), price);
+		}
+		for (WlmPrice wlmPrice : wlmPrices) {
+			wlmPriceMap.put(wlmPrice.getPriceId(), wlmPrice);
+		}
+		for (WlmCampaignItem wlmCampaignItem : wlmCampaignItems) {
+			wlmCampaignItemMap.put(wlmCampaignItem.getSkuId() + ";" + wlmCampaignItem.getStoreId(), wlmCampaignItem);
+		}
+		for (WlmCampaignItemList wlmCampaignItemList : wlmCampaignItemLists) {
+			wlmCampaignItemListMap.put(wlmCampaignItemList.getSkuId() + ";" + wlmCampaignItemList.getStoreId() + ";"
+					+ wlmCampaignItemList.getSequenceNum(), wlmCampaignItemList);
+		}
+
+		projectService.setState(project, "Analizando registros");
+		projectService.setProgress(project, 14);
+
+		/////////////////////// PAARTE de analizar data/////////////////77
+
+		int size = myPriceListsProject.size() / 10 + 1;
+		List<List<PriceListProject>> splitedPriceListProject = chopped(myPriceListsProject, size);
+		if (myPriceListsProject.size() > 100) {
+			List<CompletableFuture<Integer>> futures = new ArrayList<>();
+
+			for (int i = 0; i < splitedPriceListProject.size(); i++) {
+				int finalI = i;
+				futures.add(CompletableFuture.supplyAsync(() -> {
+					try {
+						this.generateBccData(splitedPriceListProject.get(finalI), pricesMap, wlmPriceMap,
+								wlmCampaignItemMap, wlmCampaignItemListMap, auth, isRollback, project, productsMap);
+					} catch (CloneNotSupportedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					return 3;
+				}));
+			}
+			CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[3]));
+			allOf.join();
+
+		} else {
+			this.generateBccData(myPriceListsProject, pricesMap, wlmPriceMap, wlmCampaignItemMap,
+					wlmCampaignItemListMap, auth, isRollback, project, productsMap);
+		}
+
+	}
+
+	private void generateBccData(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
+			Map<String, WlmPrice> wlmPriceMap, Map<String, WlmCampaignItem> wlmCampaignItemMap,
+			Map<String, WlmCampaignItemList> wlmCampaignItemListMap, Authentication auth, boolean isRollback,
+			Project project, Map<String, WlmProduct> productsMap) throws CloneNotSupportedException {
+		// TODO Auto-generated method stub
+		System.out.println("Ejecutando una validación");
+		for (PriceListProject item : myPriceListsProject) {
+			Integer storeId = item.getStoreNbr();
+			Integer skuId = item.getProductNbr();
+			String ProductId = "PROD_" + skuId.toString();
+			Integer basePriceReference = item.getBasePriceReference();
+			Integer basePriceSales = item.getBasePriceSales();
+			String icon1 = item.getIcon1();
+			String icon2 = item.getIcon2();
+			Integer basePackSize = item.getBasePackSize();
+			Integer basePackPrice = item.getBasePackPrice();
+
+			String keyPackPrice = storeId.toString() + ";PackPrice";
+			String keyBasePriceReference = storeId.toString() + ";ListPrice";
+			String keyBasePriceSales = storeId.toString() + ";SalePrice";
+
+			DcsPrice currentDcsPricePack = pricesMap.get(skuId.toString() + ";" + keyPackPrice);
+
+			DcsPrice currentDcsPriceBasePriceReference = pricesMap.get(skuId.toString() + ";" + keyBasePriceReference);
+			DcsPrice currentDcsPriceBasePriceSales = pricesMap.get(skuId.toString() + ";" + keyBasePriceSales);
+
+			WlmPrice currentWlmPricePack = currentDcsPricePack != null
+					? wlmPriceMap.get(currentDcsPricePack.getPriceId())
+					: null;
+			WlmPrice currentWlmBasePriceReferece = currentDcsPriceBasePriceReference != null
+					? wlmPriceMap.get(currentDcsPriceBasePriceReference.getPriceId())
+					: null;
+			WlmPrice currentWlmBasePriceSales = currentDcsPriceBasePriceSales != null
+					? wlmPriceMap.get(currentDcsPriceBasePriceSales.getPriceId())
+					: null;
+
+			WlmCampaignItem currentwlmCampaignItem = wlmCampaignItemMap.get(skuId + ";" + storeId);
+
+			WlmCampaignItemList currentwlmCampaignItemList1 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";0");
+			WlmCampaignItemList currentwlmCampaignItemList2 = wlmCampaignItemListMap.get(skuId + ";" + storeId + ";1");
+
+			PriceListProject rollbackPriceListProject = (PriceListProject) item.clone();
+
+			if (!isRollback) {
+				rollbackPriceListProject = getRollbackData(rollbackPriceListProject, currentDcsPricePack,
+						currentDcsPriceBasePriceReference, currentDcsPriceBasePriceSales, currentWlmPricePack,
+						currentWlmBasePriceReferece, currentWlmBasePriceSales, currentwlmCampaignItemList1,
+						currentwlmCampaignItemList2);
+				this.rollbackPriceListProjectList.add(rollbackPriceListProject);
+			}
+
+			if (productsMap.get(ProductId) != null) {
+				boolean insert = false;
+
+				WlmProduct product = productsMap.get(ProductId);
+				String uom = product.getContentUom();
+				String pricePerUm = this.calculateUom(uom, basePriceSales);
+
+				item.setPricePerUm(pricePerUm);
+				boolean dcsPackPriceUpdated = false, wlmPackSizeUpdated = false, wlmPackPricePerUmUpdated = false,
+						dcsPackPriceDeleted = false, wlmPackPriceDeleted = false;
+				if (basePackPrice != null && basePackPrice != 0) {
+					this.totalPack++;
+					if (currentDcsPricePack != null && currentWlmPricePack != null) {
+						this.updatePack += 1;
+						if (!currentDcsPricePack.getListPrice().equals(basePackPrice)) {
+							dcsPackPriceUpdated = true;
+						}
+
+						if (currentWlmPricePack != null) {
+							if (!currentWlmPricePack.getPackSize().equals(basePackSize)) {
+								wlmPackSizeUpdated = true;
+							}
+
+							if (!currentWlmPricePack.getPricePerUm().isEmpty()
+									&& !currentWlmPricePack.getPricePerUm().equals("0")
+									&& !currentWlmPricePack.getPricePerUm().equals(pricePerUm)) {
+								wlmPackPricePerUmUpdated = true;
+							}
+						}
+					} else {
+						// Es inserción
+						this.bcc++;
+						this.bccItems.add(item);
+						insert = true;
+						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
+								+ "' and price_list='" + storeId.toString() + ";PackPrice' union");
+					}
+				} else {
+					if (currentDcsPricePack != null) {
+						// borrar precio
+						dcsPackPriceDeleted = true;
+					}
+					if (currentWlmPricePack != null) {
+						// borrar precio
+						wlmPackPriceDeleted = true;
+					}
+				}
+
+				boolean dcsBasePriceReferenceUpdated = false, wlmBasePriceReferencePerUmUpdated = false,
+						dcsBasePriceReferenceDeleted = false, wlmBasePriceReferenceDeleted = false;
+				if (basePriceReference != null && basePriceReference != 0) {
+					this.totalBase++;
+					if (currentDcsPriceBasePriceReference != null && currentWlmBasePriceReferece != null) {
+						this.updateBase += 1;
+						if (!currentDcsPriceBasePriceReference.getListPrice().equals(basePriceReference)) {
+							dcsBasePriceReferenceUpdated = true;
+						}
+
+						if (currentWlmBasePriceReferece != null) {
+							if (!currentWlmBasePriceReferece.getPricePerUm().isEmpty()
+									&& !currentWlmBasePriceReferece.getPricePerUm().equals("0")
+									&& !currentWlmBasePriceReferece.getPricePerUm().equals(pricePerUm)) {
+								wlmBasePriceReferencePerUmUpdated = true;
+							}
+						}
+					} else {
+						// Es inserción
+						this.bcc++;
+						this.bccItems.add(item);
+						insert = true;
+						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
+								+ "' and price_list='" + storeId.toString() + ";ListPrice' union");
+					}
+				} else {
+
+					if (currentDcsPriceBasePriceReference != null) {
+						dcsBasePriceReferenceDeleted = true;
+					}
+					if (currentWlmBasePriceReferece != null) {
+						wlmBasePriceReferenceDeleted = true;
+					}
+				}
+
+				boolean dcsPriceSalesUpdated = false, wlmPriceSalesPerUmUpdated = false, dcsPriceSalesDeleted = false,
+						wlmPriceSalesDeleted = false;
+
+				if (basePriceSales != null && basePriceSales != 0) {
+					this.totalSales++;
+					if (currentDcsPriceBasePriceSales != null && currentWlmBasePriceSales != null) {
+						this.updateSales += 1;
+						if (!currentDcsPriceBasePriceSales.getListPrice().equals(basePriceSales)) {
+							dcsPriceSalesUpdated = true;
+						}
+						if (currentWlmBasePriceSales != null) {
+							if (!currentWlmBasePriceSales.getPricePerUm().isEmpty()
+									&& !currentWlmBasePriceSales.getPricePerUm().equals("0")
+									&& !currentWlmBasePriceSales.getPricePerUm().equals(pricePerUm)) {
+								wlmPriceSalesPerUmUpdated = true;
+							}
+						}
+					} else {
+						// Es inserción
+						this.bcc++;
+						this.bccItems.add(item);
+						insert = true;
+						this.addAction("select * from wlm_prod_cata.dcs_price where sku_id='" + skuId
+								+ "' and price_list='" + storeId.toString() + ";SalePrice' union");
+					}
+				} else {
+					if (currentDcsPriceBasePriceSales != null) {
+						dcsPriceSalesDeleted = true;
+					}
+					if (currentWlmBasePriceSales != null) {
+						wlmPriceSalesDeleted = true;
+					}
+				}
+
+				boolean wlmCampaignItemInserted = false, wlmCampaignItemList1Inserted = false,
+						wlmCampaignItemList1Updated = false, wlmCampaignItemList1Deleted = false,
+						wlmCampaignItemList2Inserted = false, wlmCampaignItemList2Updated = false,
+						wlmCampaignItemList2Deleted = false;
+
+				if (icon1 != null) {
+					if (currentwlmCampaignItemList1 != null) {
+						// update
+						if (!icon1.toString().equals(currentwlmCampaignItemList1.getCampaigns().toString())) {
+							// Es distinto, actualizar
+							wlmCampaignItemList1Updated = true;
+						}
+					} else {
+						// insert currentwlmCampaignItemList1 es nulo
+						wlmCampaignItemList1Inserted = true;
+					}
+				} else {
+					if (currentwlmCampaignItemList1 != null) {
+						// delete
+						wlmCampaignItemList1Deleted = true;
+					}
+				}
+				if (icon2 != null) {
+					if (currentwlmCampaignItemList2 != null) {
+						// update
+						if (!icon2.toString().equals(currentwlmCampaignItemList2.getCampaigns().toString())) {
+							// Es distinto, actualizar
+							wlmCampaignItemList2Updated = true;
+						}
+					} else {
+						// insert
+						wlmCampaignItemList2Inserted = true;
+					}
+				} else {
+					if (currentwlmCampaignItemList2 != null) {
+						// delete
+						wlmCampaignItemList2Deleted = true;
+					}
+				}
+
+				if (currentwlmCampaignItem == null
+						&& (wlmCampaignItemList1Inserted == true || wlmCampaignItemList2Inserted == true)) {
+					WlmCampaignItem wlmCampaignItem = new WlmCampaignItem(skuId.toString(), storeId.toString());
+					currentwlmCampaignItem = wlmCampaignItem;
+					wlmCampaignItemInserted = true;
+				}
+
+				if (insert == false) {
+					// Se evalua si se actualizó y se agrega
+					if (dcsPackPriceUpdated == true && !currentDcsPricePack.getPriceId().isEmpty()) {
+						if (currentDcsPricePack != null) {
+							this.addAction(
+									"update packPrice: " + currentDcsPricePack.getListPrice() + " a " + basePackPrice);
+							currentDcsPricePack.setListPrice(basePackPrice);
+							this.partialDcsPriceUpdates.add(currentDcsPricePack);
+						} else {
+							System.out.println("Nulo");
+						}
+
+					}
+					if (wlmPackSizeUpdated == true) {
+						if (currentWlmPricePack != null) {
+							this.addAction(
+									"update PricePack: " + currentWlmPricePack.getPackSize() + " a " + basePackSize);
+							currentWlmPricePack.setPackSize(basePackSize);
+							this.partialWlmPriceUpdates.add(currentWlmPricePack);
+						} else {
+							System.out.println("Nulo");
+						}
+					}
+					if (wlmPackPricePerUmUpdated == true) {
+						if (currentWlmPricePack != null) {
+							this.addAction(
+									"update PricePerUm: " + currentWlmPricePack.getPricePerUm() + " a " + pricePerUm);
+							currentWlmPricePack.setPricePerUm(pricePerUm);
+							this.partialWlmPriceUpdates.add(currentWlmPricePack);
+						} else {
+							System.out.println("Nulo");
+						}
+					}
+					if (dcsPackPriceDeleted == true) {
+						if (currentDcsPricePack != null) {
+							this.addAction("bajando pricePack en dcs");
+							this.partialDcsPriceDeletes.add(currentDcsPricePack);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (wlmPackPriceDeleted == true) {
+						if (currentWlmPricePack != null) {
+							this.addAction("bajando pricePack en wlm");
+							this.partialWlmPriceDeletes.add(currentWlmPricePack);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+
+					if (dcsBasePriceReferenceUpdated == true) {
+						if (currentDcsPriceBasePriceReference != null) {
+							this.addAction("update basePriceReference: "
+									+ currentDcsPriceBasePriceReference.getListPrice() + " a " + basePriceReference);
+							currentDcsPriceBasePriceReference.setListPrice(basePriceReference);
+							this.partialDcsPriceUpdates.add(currentDcsPriceBasePriceReference);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (wlmBasePriceReferencePerUmUpdated == true) {
+						if (currentWlmBasePriceReferece != null) {
+							this.addAction("update PricePerUm: " + currentWlmBasePriceReferece.getPricePerUm() + " a "
+									+ pricePerUm);
+							currentWlmBasePriceReferece.setPricePerUm(pricePerUm);
+							this.partialWlmPriceUpdates.add(currentWlmBasePriceReferece);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (dcsBasePriceReferenceDeleted == true) {
+						if (currentDcsPriceBasePriceReference != null) {
+							this.addAction("bajando priceReference en dcs");
+							this.partialDcsPriceDeletes.add(currentDcsPriceBasePriceReference);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (wlmBasePriceReferenceDeleted == true) {
+						if (currentWlmBasePriceReferece != null) {
+							this.addAction("bajando priceReference en wlm");
+							this.partialWlmPriceDeletes.add(currentWlmBasePriceReferece);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+
+					if (dcsPriceSalesUpdated == true) {
+						if (currentDcsPriceBasePriceSales != null) {
+							this.addAction("update basePriceSales: " + currentDcsPriceBasePriceSales.getListPrice()
+									+ " a " + basePriceSales);
+							currentDcsPriceBasePriceSales.setListPrice(basePriceSales);
+							this.partialDcsPriceUpdates.add(currentDcsPriceBasePriceSales);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (wlmPriceSalesPerUmUpdated == true) {
+						if (currentWlmBasePriceSales != null) {
+							this.addAction("update PricePerUm: " + currentWlmBasePriceSales.getPricePerUm() + " a "
+									+ pricePerUm);
+							currentWlmBasePriceSales.setPricePerUm(pricePerUm);
+							this.partialWlmPriceUpdates.add(currentWlmBasePriceSales);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (dcsPriceSalesDeleted == true) {
+						if (currentDcsPriceBasePriceSales != null) {
+							this.addAction("bajando precio priceSales en dcs");
+							this.partialDcsPriceDeletes.add(currentDcsPriceBasePriceSales);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+					if (wlmPriceSalesDeleted == true) {
+						if (currentWlmBasePriceSales != null) {
+							this.addAction("bajando precio priceSales en wlm");
+							this.partialWlmPriceDeletes.add(currentWlmBasePriceSales);
+						} else {
+							System.out.println("nulo");
+						}
+					}
+
+					if (wlmCampaignItemList1Updated == true) {
+						this.addAction("update icon1: " + currentwlmCampaignItemList1.getCampaigns() + " a " + icon1);
+						this.partialWlmCampaignItemListDeletes
+								.add((WlmCampaignItemList) currentwlmCampaignItemList1.clone());
+						currentwlmCampaignItemList1.setCampaigns(icon1);
+						this.partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList1);
+					}
+					if (wlmCampaignItemList1Inserted == true) {
+						this.addAction("insertando icon1");
+						WlmCampaignItemList wlmCampaignItemList1 = new WlmCampaignItemList(skuId.toString(),
+								storeId.toString(), 0, icon1);
+						currentwlmCampaignItemList1 = wlmCampaignItemList1;
+						this.partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList1);
+					}
+					if (wlmCampaignItemList1Deleted == true) {
+						this.addAction("Bajando icon1");
+						this.partialWlmCampaignItemListDeletes.add(currentwlmCampaignItemList1);
+					}
+
+					if (wlmCampaignItemList2Updated == true) {
+						this.addAction("update icon2: " + currentwlmCampaignItemList2.getCampaigns() + " a " + icon2);
+						this.partialWlmCampaignItemListDeletes
+								.add((WlmCampaignItemList) currentwlmCampaignItemList2.clone());
+						currentwlmCampaignItemList2.setCampaigns(icon2);
+						this.partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList2);
+					}
+					if (wlmCampaignItemList2Inserted == true) {
+						this.addAction("insertando icon2");
+						WlmCampaignItemList wlmCampaignItemList2 = new WlmCampaignItemList(skuId.toString(),
+								storeId.toString(), 1, icon2);
+						currentwlmCampaignItemList2 = wlmCampaignItemList2;
+
+						this.partialWlmCampaignItemListInserts.add(currentwlmCampaignItemList2);
+					}
+
+					if (wlmCampaignItemList2Deleted == true) {
+						this.addAction("Bajando icon2");
+						this.partialWlmCampaignItemListDeletes.add(currentwlmCampaignItemList2);
+					}
+
+					if (wlmCampaignItemInserted == true) {
+						this.partialWlmCampaignItemInserts.add(currentwlmCampaignItem);
+					}
+				}
+				item.setActionPeformed(this.actions);
+				this.actions = "";
+			} else {
+				// System.out.println("No existe el sku en atg");
+				item.setError(true);
+			}
+			this.percentageUpdates = (int) this.i * 100 / this.total;
+			projectService.setProgress(project, this.percentageUpdates);
+			this.i++;
+		}
 	}
 
 }
