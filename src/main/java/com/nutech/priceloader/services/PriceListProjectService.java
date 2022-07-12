@@ -243,9 +243,9 @@ public class PriceListProjectService {
 				int finalI = i;
 				futures.add(CompletableFuture.supplyAsync(() -> {
 					try {
-						this.priceValidations(splitedPriceListProject.get(finalI), pricesMap, wlmPriceMap,
+						this.validatePrices(splitedPriceListProject.get(finalI), pricesMap, wlmPriceMap,
 								wlmCampaignItemMap, wlmCampaignItemListMap, auth, isRollback, project, productsMap);
-					} catch (CloneNotSupportedException | IOException e) {
+					} catch (CloneNotSupportedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
@@ -256,7 +256,7 @@ public class PriceListProjectService {
 			allOf.join();
 
 		} else {
-			this.priceValidations(myPriceListsProject, pricesMap, wlmPriceMap, wlmCampaignItemMap,
+			this.validatePrices(myPriceListsProject, pricesMap, wlmPriceMap, wlmCampaignItemMap,
 					wlmCampaignItemListMap, auth, isRollback, project, productsMap);
 		}
 
@@ -352,9 +352,9 @@ public class PriceListProjectService {
 				priceListProjectRepository.saveAll(this.rollbackPriceListProjectList);
 		}
 	}
-
+/*
 	@Async
-	private void priceValidations(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
+	private void generateBccData(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
 			Map<String, WlmPrice> wlmPriceMap, Map<String, WlmCampaignItem> wlmCampaignItemMap,
 			Map<String, WlmCampaignItemList> wlmCampaignItemListMap, Authentication auth, boolean isRollback,
 			Project project, Map<String, WlmProduct> productsMap) throws CloneNotSupportedException, IOException {
@@ -724,7 +724,7 @@ public class PriceListProjectService {
 			this.i++;
 		}
 	}
-
+*/
 	private List<PriceListProject> getUniqPriceListProject(List<PriceListProject> plp) {
 		Set<PriceListProject> set = new HashSet<PriceListProject>();
 		for (PriceListProject pricelp : plp) {
@@ -1218,7 +1218,8 @@ public class PriceListProjectService {
 		return priceListProjectRepository.findByProjectAndIsRollback(myProject, isRollback);
 	}
 
-	public void generateBccFiles(List<PriceListProject> myPriceListsProject, Project project, boolean isRollback,
+	/*
+	public void priceValidations(List<PriceListProject> myPriceListsProject, Project project, boolean isRollback,
 			Authentication auth)
 			throws CloneNotSupportedException, IOException, InterruptedException, ExecutionException {
 		this.initialize();
@@ -1284,7 +1285,7 @@ public class PriceListProjectService {
 				int finalI = i;
 				futures.add(CompletableFuture.supplyAsync(() -> {
 					try {
-						this.generateBccData(splitedPriceListProject.get(finalI), pricesMap, wlmPriceMap,
+						this.validatePrices(splitedPriceListProject.get(finalI), pricesMap, wlmPriceMap,
 								wlmCampaignItemMap, wlmCampaignItemListMap, auth, isRollback, project, productsMap);
 					} catch (CloneNotSupportedException e) {
 						// TODO Auto-generated catch block
@@ -1297,13 +1298,13 @@ public class PriceListProjectService {
 			allOf.join();
 
 		} else {
-			this.generateBccData(myPriceListsProject, pricesMap, wlmPriceMap, wlmCampaignItemMap,
+			this.validatePrices(myPriceListsProject, pricesMap, wlmPriceMap, wlmCampaignItemMap,
 					wlmCampaignItemListMap, auth, isRollback, project, productsMap);
 		}
 
 	}
-
-	private void generateBccData(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
+	 */
+	private void validatePrices(List<PriceListProject> myPriceListsProject, Map<String, DcsPrice> pricesMap,
 			Map<String, WlmPrice> wlmPriceMap, Map<String, WlmCampaignItem> wlmCampaignItemMap,
 			Map<String, WlmCampaignItemList> wlmCampaignItemListMap, Authentication auth, boolean isRollback,
 			Project project, Map<String, WlmProduct> productsMap) throws CloneNotSupportedException {
@@ -1692,8 +1693,9 @@ public class PriceListProjectService {
 				// System.out.println("No existe el sku en atg");
 				item.setError(true);
 			}
-			this.percentageUpdates = (int) this.i * 100 / this.total;
-			projectService.setProgress(project, this.percentageUpdates);
+			this.percentageUpdates = this.i !=0 ? (int) this.i * 100 / this.total : 0;
+			if (this.percentageUpdates %15 == 0)
+				projectService.setProgress(project, this.percentageUpdates);
 			this.i++;
 		}
 	}

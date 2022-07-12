@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.async.DeferredResult;
 
 import com.nutech.priceloader.entities.PriceListProject;
 import com.nutech.priceloader.entities.Project;
@@ -85,7 +84,7 @@ public class ProjectController {
 			e.printStackTrace();
 		}
 	}
-	
+	/*
 	@PostMapping(path = "/generateBccFiles", produces = "application/json")
 	public void generateBccFiles(@RequestBody Project project, Authentication auth) {
 
@@ -121,6 +120,7 @@ public class ProjectController {
 			e.printStackTrace();
 		}
 	}
+	*/
 
 	@PostMapping(path = "/nextStepFinish", produces = "application/json")
 	public Project nextStepFinish(@RequestBody Project project, Authentication auth) {
