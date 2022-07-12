@@ -28,7 +28,7 @@ public class Scheduler {
 
 	@Autowired
 	CatchingControlRepository catchingControlRepository;
-
+/*
 	
 	@Scheduled(cron = "0 0/5 * * * ?")
 	public void checkCacheProducts() throws InterruptedException, ExecutionException {
@@ -49,7 +49,7 @@ public class Scheduler {
 		});
 	}
 	
-
+*/
 
 
 }

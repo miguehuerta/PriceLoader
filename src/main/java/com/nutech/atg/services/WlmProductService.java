@@ -18,8 +18,7 @@ public class WlmProductService {
 
 	@Autowired
 	WlmProductRepository wlmProductRepository;
-	
-	@Cacheable(key = "'products'", value = "productsCache")
+
 	public List<WlmProduct> findAll(){
 		System.out.println("Getting All the products from DB! | Not Cached");
 		return wlmProductRepository.findAll();
@@ -29,7 +28,6 @@ public class WlmProductService {
 		return wlmProductRepository.count();
 	}
 
-	@CachePut(key = "'products'", value="productsCache")
 	public List<WlmProduct> updateCacheDeltas() {
 		List<WlmProduct> all = this.findAll();
 		Set<String> ids = all.stream().map(WlmProduct::getProductId)
