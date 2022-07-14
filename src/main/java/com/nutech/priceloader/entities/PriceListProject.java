@@ -70,7 +70,7 @@ public class PriceListProject implements  Cloneable{
 	@Column(name="is_rollback", columnDefinition = "boolean default false")
 	private boolean isRollback;
 	
-	@Column(name="action_performed", length=700)
+	@Column(name="action_performed", length=1000)
 	private String actionPeformed;
 	
 	//Product Number;Physical Store ID;List Price;Sale Price;TLMC Price;Pack Price;Pack Size;Cost;Campaign 1;Campaign 2;PPUM;Validation From;Validation To;Stock;BundleCampaign

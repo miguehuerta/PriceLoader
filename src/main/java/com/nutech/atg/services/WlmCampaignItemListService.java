@@ -22,7 +22,7 @@ public class WlmCampaignItemListService {
 	
 	
 	@Async
-	public CompletableFuture<List<WlmCampaignItemList>> saveCampaignListItemsOneByOne(List<WlmCampaignItemList> campaignItems, String env) {
+	public CompletableFuture<List<WlmCampaignItemList>> saveCampaignListItemsCheckingBeforeExists(List<WlmCampaignItemList> campaignItems, String env) {
 		// TODO Auto-generated method stub
 		List<WlmCampaignItemList> returnedCamp= new ArrayList<>();
 		if (env.equals("preview")) {
@@ -36,13 +36,15 @@ public class WlmCampaignItemListService {
 				} catch (Exception e) {
 					// TODO: handle exception
 					System.out.println("campaignItemList "+citemList + " conn problema de fk");
+					System.out.println("Eliminando y guardando nuevamente");
+					
 				}
 			}
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
 		
 		if (env.equals("prod")) {
-			System.out.println("Guardando nuevos wlmCampaignItemList en prod");
+			System.out.println("Guardando nuevos wlmCampaignItemList en prod con reitento, y validación de que o existen");
 			System.out.println("Saving a list of wlmCampaignItemList of size " + campaignItems.size() + " records");
 			final long start = System.currentTimeMillis();
 			catalogService.changeCatA();
@@ -54,9 +56,12 @@ public class WlmCampaignItemListService {
 					wlmCampaignItemListRepository.save(citemList);
 				} catch (Exception e) {
 					// TODO: handle exception
-					System.out.println("campaignItemList "+citemList + " conn problema de fk");
+					System.out.println("campaignItemList "+citemList + " conn problema de fk en cata");
+					System.out.println("Eliminando y guardando nuevamente");
+					
 				}
 			}
+			
 			wlmCampaignItemListRepository.flush();
 			catalogService.changeCatB();
 			List<WlmCampaignItemList> validatedCampaignItemsListnotin2 = this
@@ -66,7 +71,7 @@ public class WlmCampaignItemListService {
 					wlmCampaignItemListRepository.save(citemList);
 				} catch (Exception e) {
 					// TODO: handle exception
-					System.out.println("campaignItemList "+citemList + " conn problema de fk");
+					System.out.println("campaignItemList "+citemList + " conn problema de fk en catb");
 				}
 			}
 			wlmCampaignItemListRepository.flush();
@@ -149,6 +154,87 @@ public class WlmCampaignItemListService {
 			wlmCampaignItemListRepository.flush();
 			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
 		}
+	}
+
+
+	public void saveCampaignListItemsOneByOneDeletingBeforeSave(List<WlmCampaignItemList> campaignItems,
+			String env) {
+		// TODO Auto-generated method stub
+		// TODO Auto-generated method stub
+		List<WlmCampaignItemList> returnedCamp= new ArrayList<>();
+		if (env.equals("preview")) {
+			System.out.println("Guardando nuevos wlmCampaignItemList en preview");
+			final long start = System.currentTimeMillis();
+			List<WlmCampaignItemList> validatedCampaignItemsListnotin = this
+					.validateCampaignsListNotIn(campaignItems);
+			for (WlmCampaignItemList citemList: validatedCampaignItemsListnotin) {
+				try {
+					System.out.println("Borrando item "+citemList);
+					wlmCampaignItemListRepository.delete(citemList);
+					System.out.println("Guardando item "+citemList);
+					wlmCampaignItemListRepository.save(citemList);
+				} catch (Exception e) {
+					// TODO: handle exception
+					System.out.println("campaignItemList "+citemList + " conn problema de fk");
+					System.out.println("Eliminando y guardando nuevamente");
+					System.out.println("Borrando item "+citemList);
+					wlmCampaignItemListRepository.delete(citemList);
+					System.out.println("Guardando item "+citemList);
+					wlmCampaignItemListRepository.save(citemList);
+				}
+			}
+			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
+		}
+		
+		if (env.equals("prod")) {
+			System.out.println("Guardando nuevos wlmCampaignItemList en prod con reitento, y validación de que o existen");
+			System.out.println("Saving a list of wlmCampaignItemList of size " + campaignItems.size() + " records");
+			final long start = System.currentTimeMillis();
+			catalogService.changeCatA();
+			
+			List<WlmCampaignItemList> validatedCampaignItemsListnotin = this
+					.validateCampaignsListNotIn(campaignItems);
+			for (WlmCampaignItemList citemList: validatedCampaignItemsListnotin) {
+				try {
+					System.out.println("Borrando item "+citemList);
+					wlmCampaignItemListRepository.delete(citemList);
+					System.out.println("Guardando item "+citemList);
+					wlmCampaignItemListRepository.save(citemList);
+				} catch (Exception e) {
+					// TODO: handle exception
+					System.out.println("campaignItemList "+citemList + " conn problema de fk en cata");
+					System.out.println("Eliminando y guardando nuevamente");
+					System.out.println("Borrando item "+citemList);
+					wlmCampaignItemListRepository.delete(citemList);
+					System.out.println("Guardando item "+citemList);
+					wlmCampaignItemListRepository.save(citemList);
+				}
+			}
+			
+			wlmCampaignItemListRepository.flush();
+			catalogService.changeCatB();
+			List<WlmCampaignItemList> validatedCampaignItemsListnotin2 = this
+					.validateCampaignsListNotIn(campaignItems);
+			for (WlmCampaignItemList citemList: validatedCampaignItemsListnotin2) {
+				try {
+					System.out.println("Borrando item "+citemList);
+					wlmCampaignItemListRepository.delete(citemList);
+					System.out.println("Guardando item "+citemList);
+					wlmCampaignItemListRepository.save(citemList);
+				} catch (Exception e) {
+					// TODO: handle exception
+					System.out.println("campaignItemList "+citemList + " conn problema de fk en catb");
+					System.out.println("Eliminando y guardando nuevamente");
+					System.out.println("Borrando item "+citemList);
+					wlmCampaignItemListRepository.delete(citemList);
+					System.out.println("Guardando item "+citemList);
+					wlmCampaignItemListRepository.save(citemList);
+				}
+			}
+			wlmCampaignItemListRepository.flush();
+			System.out.println("Elapsed time:" + (System.currentTimeMillis() - start));
+		}
+		
 	}
 
 }

@@ -28,7 +28,7 @@ public class PriceLoader2Application implements CommandLineRunner{
 		// TODO Auto-generated method stub
 		
 
-		System.out.println("Versión con cambio en detalle al finalizar");
+		System.out.println("Versión con bastantes exxcepciones controladas y reintento en campañas y sin guardar rollback ni acciones");
 
 		User migue = repository.getUserByUsername("migue@gmail.com");
 		
